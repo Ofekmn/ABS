@@ -12,9 +12,11 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import ui.admin.AdminController;
 import ui.customer.CustomerController;
+import ui.login.LoginController;
 
 import java.io.IOException;
 import java.net.URL;
@@ -28,6 +30,8 @@ public class MainController {
     @FXML ComboBox viewCB;
     @FXML Label yazLabel;
 
+    private GridPane loginComponent;
+    private LoginController loginController;
     private AdminController adminController;
     private Map<String, CustomerController> customerControllerMap;
     private BorderPane root;
@@ -57,6 +61,10 @@ public class MainController {
 
     public void setList(ObservableList<String> list) { this.list = list; }
 
+
+    public Map<String, CustomerController> getCustomerControllerMap() {
+        return customerControllerMap;
+    }
 
     public Stage getPrimaryStage() {
         return primaryStage;
@@ -101,21 +109,22 @@ public class MainController {
         customerControllerMap.clear();
 
         for(CustomerDTO customer : customers) {
-            FXMLLoader loader = new FXMLLoader();
-            URL url = getClass().getResource("customer/customer.fxml");
-            loader.setLocation(url);
-            ScrollPane scrollPane = loader.load(url.openStream());
-            CustomerController customerController = loader.getController();
-            customerController.updateCustomer(customer);
-            customerController.setMainController(this);
-            customerController.setEngine(engine);
-            customerController.setScrollPane(scrollPane);
-            customerControllerMap.put(customer.getName(), customerController);
+            createCustomerController(customer);
         }
-
-
     }
 
+    public void createCustomerController(CustomerDTO customer) throws IOException {
+        FXMLLoader loader = new FXMLLoader();
+        URL url = getClass().getResource("customer/customer.fxml");
+        loader.setLocation(url);
+        ScrollPane scrollPane = loader.load(url.openStream());
+        CustomerController customerController = loader.getController();
+        customerController.updateCustomer(customer);
+        customerController.setMainController(this);
+        customerController.setEngine(engine);
+        customerController.setScrollPane(scrollPane);
+        customerControllerMap.put(customer.getName(), customerController);
+    }
 
     @FXML
     public void switchView() {
@@ -138,6 +147,21 @@ public class MainController {
             customerControllerMap.get(name).updateCustomer(engine.createCustomerDTO(name));
         }
     }
+
+    public void loadLoginPage() {
+        URL loginPageUrl = getClass().getResource("login/login.fxml");
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            fxmlLoader.setLocation(loginPageUrl);
+            loginComponent = fxmlLoader.load();
+            loginController = fxmlLoader.getController();
+            loginController.setMainController(this);
+            root.setCenter(loginComponent);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public void setCurrentYaz(int currentYaz) {
         this.currentYaz = currentYaz;

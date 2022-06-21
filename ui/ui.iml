@@ -19,5 +19,7 @@
       </library>
     </orderEntry>
     <orderEntry type="library" exported="" name="controlsfx-8.40.14" level="project" />
+    <orderEntry type="library" name="google-gson-2" level="project" />
+    <orderEntry type="library" name="okHttp" level="project" />
   </component>
 </module>
