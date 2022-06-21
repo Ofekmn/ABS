@@ -14,6 +14,9 @@ public class Customer implements Serializable {
     private List<CustomerNotification> notificationList;
 
 
+    public Customer() {
+    }
+
     public Customer(String name, double balance) {
         borrowerLoans=new LinkedList<>();
         lenderLoans=new LinkedList<>();

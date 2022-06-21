@@ -35,11 +35,11 @@ public class UIMain extends Application {
         BorderPane root = loader.load(url.openStream());
         MainController mainController=loader.getController();
 
-        loader = new FXMLLoader();
-        url = getClass().getResource("admin/admin.fxml");
-        loader.setLocation(url);
-        ScrollPane scrollPane= loader.load(url.openStream());
-        AdminController adminController=loader.getController();
+//        loader = new FXMLLoader();
+//        url = getClass().getResource("admin/admin.fxml");
+//        loader.setLocation(url);
+//        ScrollPane scrollPane= loader.load(url.openStream());
+//        AdminController adminController=loader.getController();
 
 
 
@@ -50,18 +50,19 @@ public class UIMain extends Application {
         Engine engine = new EngineImpl();
         mainController.setPrimaryStage(primaryStage);
         mainController.setEngine(engine);
-        adminController.setEngine(engine);
-        adminController.setPrimaryStage(primaryStage);
-        mainController.setAdminController(adminController);
-        adminController.setMainController(mainController);
-
-        adminController.setRoot(scrollPane);
+//        adminController.setEngine(engine);
+//        adminController.setPrimaryStage(primaryStage);
+//        mainController.setAdminController(adminController);
+//        adminController.setMainController(mainController);
+//
+//        adminController.setRoot(scrollPane);
 
         // set stage
 
         primaryStage.setTitle("A.B.S");
         mainController.setRoot(root);
-        root.setCenter(scrollPane);
+        mainController.loadLoginPage();
+//        root.setCenter(scrollPane);
         emptyScrollPane.setContent(root);
         Scene scene=new Scene(emptyScrollPane, 1280, 800);
         primaryStage.setScene(scene);
