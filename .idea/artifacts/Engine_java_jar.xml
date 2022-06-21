@@ -1,0 +1,17 @@
+<component name="ArtifactManager">
+  <artifact name="Engine.java:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Engine_java_jar</output-path>
+    <root id="root">
+      <element id="archive" name="Engine.java.jar">
+        <element id="directory" name="META-INF">
+          <element id="file-copy" path="$PROJECT_DIR$/dto/src/META-INF/MANIFEST.MF" />
+        </element>
+        <element id="module-output" name="engine" />
+        <element id="module-output" name="dto" />
+        <element id="module-output" name="ui" />
+      </element>
+      <element id="file-copy" path="$USER_HOME$/Desktop/08. Java FX/tools/controlsfx/controlsfx-8.40.14.jar" />
+      <element id="library" level="project" name="controlsfx-8.40.14" />
+    </root>
+  </artifact>
+</component>
