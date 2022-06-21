@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane depthTest="ENABLE" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="785.0" minWidth="1260.0" prefHeight="800.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.MainController">
+    <top>
+        <ScrollPane fitToHeight="true" fitToWidth="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="60.0" minWidth="1280.0" prefHeight="85.0" prefWidth="1280.0" BorderPane.alignment="CENTER">
+            <content>
+                <HBox alignment="CENTER" focusTraversable="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="55.0" minWidth="1270.0" prefHeight="58.0" prefWidth="1280.0" spacing="10.0">
+                    <children>
+                  <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="35.0" prefWidth="51.0" text="View:">
+                     <padding>
+                        <Insets bottom="5.0" />
+                     </padding></Label>
+                        <ComboBox fx:id="viewCB" onAction="#switchView" prefHeight="32.0" prefWidth="93.0" HBox.hgrow="ALWAYS">
+                            <opaqueInsets>
+                                <Insets />
+                            </opaqueInsets>
+                     <padding>
+                        <Insets top="10.0" />
+                     </padding>
+                        </ComboBox>
+                        <HBox focusTraversable="true" prefHeight="45.0" prefWidth="974.0" spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label accessibleRole="TEXT_FIELD" alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="40.0" prefWidth="24.0" text="File:">
+                                    <padding>
+                                        <Insets top="20.0" />
+                                    </padding>
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </Label>
+                                <Label fx:id="selectedFileName" accessibleRole="TEXT_FIELD" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" textOverrun="CLIP" HBox.hgrow="ALWAYS">
+                                    <padding>
+                                        <Insets top="20.0" />
+                                    </padding>
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </Label>
+                            </children>
+                        </HBox>
+                        <Label fx:id="yazLabel" accessibleRole="TEXT_FIELD" ellipsisString="" maxWidth="1.7976931348623157E308" prefHeight="40.0" prefWidth="108.0" text="Current Yaz: " textOverrun="CLIP" HBox.hgrow="NEVER">
+                            <padding>
+                                <Insets top="20.0" />
+                            </padding>
+                            <font>
+                                <Font size="14.0" />
+                            </font>
+                        </Label>
+                    </children>
+                    <padding>
+                        <Insets bottom="5.0" left="20.0" right="20.0" top="10.0" />
+                    </padding>
+                    <opaqueInsets>
+                        <Insets top="20.0" />
+                    </opaqueInsets>
+                </HBox>
+            </content>
+            <padding>
+                <Insets bottom="5.0" />
+            </padding>
+         <BorderPane.margin>
+            <Insets />
+         </BorderPane.margin>
+        </ScrollPane>
+    </top>
+</BorderPane>
