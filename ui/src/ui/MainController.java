@@ -136,6 +136,10 @@ public class MainController {
         }
     }
 
+    public void switchViewCustomer(String name) {
+        root.setCenter(customerControllerMap.get(name).getScrollPane());
+    }
+
     public void updateCustomersAdmin() {
         adminController.updateCustomers();
     }

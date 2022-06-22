@@ -1,19 +1,18 @@
 package abs.servlets;
 
-import abs.constants.Constants;
 import abs.utils.ServletUtils;
 import abs.utils.SessionUtils;
+import com.google.gson.Gson;
+import engine.EngineImpl;
 import engine.customer.Customer;
-import engine.loan.Loan;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.util.Map;
+import java.io.PrintWriter;
 
-import static abs.constants.Constants.LOGIN_PAGE;
 import static abs.constants.Constants.USERNAME;
 
 @WebServlet(name = "loginServlet", urlPatterns = {"/loginShortResponse"})
@@ -23,7 +22,7 @@ public class loginServlet extends HttpServlet {
         response.setContentType("text/plain;charset=UTF-8");
 
         String usernameFromSession = SessionUtils.getUsername(request);
-        Map<String, Customer> userManager = ServletUtils.getUserManager(getServletContext());
+        EngineImpl engineManager = ServletUtils.getEngineManager(getServletContext());
 
         if (usernameFromSession == null) { //user is not logged in yet
 
@@ -36,7 +35,6 @@ public class loginServlet extends HttpServlet {
             } else {
                 //normalize the username value
                 usernameFromParameter = usernameFromParameter.trim();
-                Customer temp=new Customer(usernameFromParameter, 0.0);
                 /*
                 One can ask why not enclose all the synchronizations inside the userManager object ?
                 Well, the atomic action we need to perform here includes both the question (isUserExists) and (potentially) the insertion
@@ -50,7 +48,7 @@ public class loginServlet extends HttpServlet {
                 do here other not related actions (such as response setup. this is shown here in that manner just to stress this issue
                  */
                 synchronized (this) {
-                    if (userManager.keySet().contains(usernameFromParameter)) {
+                    if (engineManager.getCustomersMap().keySet().contains(usernameFromParameter)) {
                         String errorMessage = "Username " + usernameFromParameter + " already exists. Please enter a different username.";
 
                         // stands for unauthorized as there is already such user with this name
@@ -59,7 +57,7 @@ public class loginServlet extends HttpServlet {
                     }
                     else {
                         //add the new user to the users list
-                        userManager.put(usernameFromParameter, temp);
+                        engineManager.getCustomersMap().put(usernameFromParameter, new Customer(usernameFromParameter,0.0));
                         //set the username in a session so it will be available on each request
                         //the true parameter means that if a session object does not exists yet
                         //create a new one
@@ -67,7 +65,11 @@ public class loginServlet extends HttpServlet {
 
                         //redirect the request to the chat room - in order to actually change the URL
                         System.out.println("On login, request URI is: " + request.getRequestURI());
+                        PrintWriter writer=response.getWriter();
+                        Gson gson= new Gson();
+                        writer.println(gson.toJson(engineManager.createCustomerDTO(usernameFromParameter)));
                         response.setStatus(HttpServletResponse.SC_OK);
+                        //                        getServletContext().getRequestDispatcher().include(request, response);
                     }
                 }
             }

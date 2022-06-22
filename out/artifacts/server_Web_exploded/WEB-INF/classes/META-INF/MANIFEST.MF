@@ -1,4 +1,4 @@
 Manifest-Version: 1.0
 Main-Class: ui.UIMain
-Class-Path: controlsfx-8.40.14.jar controlsfx-8.40.14.jar
+Class-Path: dto.jar
 

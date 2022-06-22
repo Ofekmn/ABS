@@ -1,11 +1,7 @@
 package abs.utils;
 
-import engine.customer.Customer;
+import engine.EngineImpl;
 import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class ServletUtils {
     private static final String USER_MANAGER_ATTRIBUTE_NAME = "engine";
@@ -16,13 +12,13 @@ public class ServletUtils {
      */
     private static final Object userManagerLock = new Object();
 
-    public static Map<String, Customer> getUserManager(ServletContext servletContext) {
+    public static EngineImpl getEngineManager(ServletContext servletContext) {
 
         synchronized (userManagerLock) {
             if (servletContext.getAttribute(USER_MANAGER_ATTRIBUTE_NAME) == null) {
-                servletContext.setAttribute(USER_MANAGER_ATTRIBUTE_NAME, new HashMap<String, Customer>());
+                servletContext.setAttribute(USER_MANAGER_ATTRIBUTE_NAME, new EngineImpl());
             }
         }
-        return (Map<String, Customer>) servletContext.getAttribute(USER_MANAGER_ATTRIBUTE_NAME);
+        return (EngineImpl) servletContext.getAttribute(USER_MANAGER_ATTRIBUTE_NAME);
     }
 }

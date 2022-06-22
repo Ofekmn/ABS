@@ -21,6 +21,8 @@ import ui.util.HttpClientUtil;
 
 import java.io.IOException;
 
+import static ui.util.Constants.GSON_INSTANCE;
+
 public class LoginController {
     @FXML
     public TextField userNameTextField;
@@ -64,16 +66,18 @@ public class LoginController {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
                 if (response.code() != 200) {
-                    String responseBody = response.body().string();
                     Platform.runLater(() ->
                             errorMessageProperty.set("Something went wrong: " + responseBody)
                     );
                 } else {
                     Platform.runLater(() -> {
-                        CustomerDTO loggedIn=mainController.getEngine().createCustomerDTO(userName);
+
+                        CustomerDTO loggedIn=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
                         try {
                             mainController.createCustomerController(loggedIn);
+                            mainController.switchViewCustomer(loggedIn.getName());
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
