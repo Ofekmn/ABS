@@ -1,5 +1,6 @@
 package ui.login;
 
+import dto.customerDTO.CustomerDTO;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -70,8 +71,12 @@ public class LoginController {
                     );
                 } else {
                     Platform.runLater(() -> {
-//                        mainController.updateCustomer(userName);
-//                        mainController.switchToChatRoom();
+                        CustomerDTO loggedIn=mainController.getEngine().createCustomerDTO(userName);
+                        try {
+                            mainController.createCustomerController(loggedIn);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     });
                 }
             }

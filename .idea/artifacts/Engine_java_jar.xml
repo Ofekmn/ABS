@@ -6,7 +6,7 @@
         <element id="directory" name="META-INF">
           <element id="file-copy" path="$PROJECT_DIR$/dto/src/META-INF/MANIFEST.MF" />
         </element>
-        <element id="module-output" name="engine" />
+        <element id="module-output" name="engineLogic" />
         <element id="module-output" name="dto" />
         <element id="module-output" name="ui" />
       </element>
