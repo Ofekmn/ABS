@@ -30,7 +30,6 @@
         </rowConstraints>
          <children>
             <Button fx:id="increaseYazButton" disable="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#increaseYazButtonAction" prefHeight="25.0" prefWidth="124.0" text="Increase Yaz" GridPane.columnIndex="1" />
-            <Button accessibleRole="SCROLL_PANE" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#loadFIleButtonAction" prefHeight="25.0" prefWidth="108.0" text="Load File" textOverrun="CLIP" GridPane.columnIndex="4" />
             <ScrollPane fx:id="loanScrollPane" fitToHeight="true" fitToWidth="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.columnSpan="4" GridPane.rowIndex="1" GridPane.rowSpan="2">
                <content>
                   <TableView fx:id="loanTable" editable="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="200.0" minWidth="2800.0" prefHeight="150.0" prefWidth="3000.0">

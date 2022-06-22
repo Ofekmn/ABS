@@ -123,6 +123,7 @@ public class MainController {
         customerController.setMainController(this);
         customerController.setEngine(engine);
         customerController.setScrollPane(scrollPane);
+        customerController.setPrimaryStage(primaryStage);
         customerControllerMap.put(customer.getName(), customerController);
     }
 

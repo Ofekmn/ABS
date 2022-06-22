@@ -365,43 +365,6 @@ public class AdminController  {
         this.engine = engine;
     }
 
-    @FXML
-    public void loadFIleButtonAction() throws IOException, CloneNotSupportedException {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Choose an xml file");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("xml files", "*.xml"));
-        File selectedFile = fileChooser.showOpenDialog(primaryStage);
-        if(selectedFile == null) {
-            return;
-        }
-        try {
-            engine.loadFileOld(selectedFile);
-            String absolutePath=selectedFile.getAbsolutePath();
-            mainController.getSelectedFileProperty().set(absolutePath);
-            isFileSelected.set(true);
-            customers= engine.getAllCustomersDetails();
-            loans=engine.getAllLoans();
-            loansList=FXCollections.observableArrayList(loans);
-            customerList=FXCollections.observableArrayList(customers);
-            customerTable.setItems(customerList);
-            loanTable.setItems(loansList);
-            mainController.updateSystem(customers);
-            xmlMessage("Success!", "File loaded successfully!");
-        }
-        catch(NameException e ) {
-            xmlMessage("InvalidFile", "There are 2 different instances of the " + e.getType() + " " + e.getName());
-        }
-        catch (LoanFieldDoesNotExist e) {
-            xmlMessage("InvalidFile", "The loan " + e.getLoanID() + " contains the " + e.getFieldType() + " " + e.getName() +
-                                        ", but the " + e.getFieldType() + " " + e.getName() + " doesn't exist.");
-        }
-        catch (YazException e) {
-            xmlMessage("InvalidFile", "For the loan: " + e.getLoanID() + ", the total loan time (" + e.getTotalYaz() +
-                              ") isn't divided by the payment rate (" + e.getPaymentRate() + ")");
-        }
-
-    }
-
     private void xmlMessage(String title, String message) {
         Notifications.create()
                 .title(title)

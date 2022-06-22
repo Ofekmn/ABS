@@ -5,6 +5,10 @@ import dto.customerDTO.NotificationDTO;
 import dto.customerDTO.TransactionDTO;
 import dto.loanDTO.LoanDTO;
 import engine.Engine;
+import engine.exception.xml.LoanFieldDoesNotExist;
+import engine.exception.xml.NameException;
+import engine.exception.xml.YazException;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringExpression;
 import javafx.beans.property.*;
@@ -18,18 +22,28 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import okhttp3.*;
 import org.controlsfx.control.CheckComboBox;
 import org.controlsfx.control.Notifications;
+import org.jetbrains.annotations.NotNull;
 import ui.MainController;
+import ui.util.HttpClientUtil;
 
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static ui.util.Constants.UPLOAD_FILE_PAGE;
+import static ui.util.Constants.GSON_INSTANCE;
 
 
 public class CustomerController  {
@@ -189,7 +203,7 @@ public class CustomerController  {
     @FXML Label paymentInvalidInput;
     @FXML Label paymentNotEnoughMoneyLabel;
 
-
+    private Stage primaryStage;
     private ScrollPane scrollPane;
     private Engine engine;
     private MainController mainController;
@@ -509,6 +523,85 @@ public class CustomerController  {
             else
                 return null;
         });
+    }
+
+    public void setPrimaryStage(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+    }
+
+    @FXML
+    public void loadFIleButtonAction() throws IOException, CloneNotSupportedException {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choose an xml file");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("xml files", "*.xml"));
+        File selectedFile = fileChooser.showOpenDialog(primaryStage);
+        if(selectedFile == null) {
+            return;
+        }
+
+        RequestBody body =
+                new MultipartBody.Builder()
+                        .addFormDataPart("file1", selectedFile.getName(), RequestBody.create(selectedFile, MediaType.parse("application/xml")))
+                        //.addFormDataPart("key1", "value1") // you can add multiple, different parts as needed
+                        .build();
+
+        Request request = new Request.Builder()
+                .url(UPLOAD_FILE_PAGE)
+                .post(body)
+                .build();
+        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Platform.runLater(() ->
+                        notification("Error: ", e.getMessage())
+                );
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                if (response.code() != 200) {
+                    Platform.runLater(() ->
+                            notification("Invalid File", responseBody)
+                    );
+                } else {
+                    Platform.runLater(() -> {
+
+                        CustomerDTO loggedIn=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        updateCustomer(loggedIn);
+
+                    });
+                }
+            }
+        });
+
+//        try {
+//            engine.loadFile(selectedFile);
+//            String absolutePath=selectedFile.getAbsolutePath();
+//            mainController.getSelectedFileProperty().set(absolutePath);
+//            isFileSelected.set(true);
+//            customers= engine.getAllCustomersDetails();
+//            loans=engine.getAllLoans();
+//            loansList=FXCollections.observableArrayList(loans);
+//            customerList=FXCollections.observableArrayList(customers);
+//            customerTable.setItems(customerList);
+//            loanTable.setItems(loansList);
+//            mainController.updateSystem(customers);
+//            xmlMessage("Success!", "File loaded successfully!");
+//        }
+//        catch(NameException e ) {
+//            xmlMessage("InvalidFile", "There are 2 different instances of the " + e.getType() + " " + e.getName());
+//        }
+//        catch (LoanFieldDoesNotExist e) {
+//            xmlMessage("InvalidFile", "The loan " + e.getLoanID() + " contains the " + e.getFieldType() + " " + e.getName() +
+//                    ", but the " + e.getFieldType() + " " + e.getName() + " doesn't exist.");
+//        }
+//        catch (YazException e) {
+//            xmlMessage("InvalidFile", "For the loan: " + e.getLoanID() + ", the total loan time (" + e.getTotalYaz() +
+//                    ") isn't divided by the payment rate (" + e.getPaymentRate() + ")");
+//        }
+
     }
 
 
