@@ -1,13 +1,13 @@
 <component name="libraryTable">
   <library name="google-gson-2">
     <CLASSES>
-      <root url="file://$USER_HOME$/Desktop/Online Chat V3/3rd/google-gson-2.1" />
+      <root url="file://$PROJECT_DIR$/../IdeaProjects/JavaFX/src/3rd/google-gson-2.1" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="file://$USER_HOME$/Desktop/Online Chat V3/3rd/google-gson-2.1" />
+      <root url="file://$PROJECT_DIR$/../IdeaProjects/JavaFX/src/3rd/google-gson-2.1" />
     </SOURCES>
-    <jarDirectory url="file://$USER_HOME$/Desktop/Online Chat V3/3rd/google-gson-2.1" recursive="false" />
-    <jarDirectory url="file://$USER_HOME$/Desktop/Online Chat V3/3rd/google-gson-2.1" recursive="false" type="SOURCES" />
+    <jarDirectory url="file://$PROJECT_DIR$/../IdeaProjects/JavaFX/src/3rd/google-gson-2.1" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/../IdeaProjects/JavaFX/src/3rd/google-gson-2.1" recursive="false" type="SOURCES" />
   </library>
 </component>
