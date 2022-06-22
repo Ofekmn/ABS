@@ -40,8 +40,8 @@
                         <ColumnConstraints hgrow="SOMETIMES" maxWidth="10.0" minWidth="10.0" prefWidth="10.0" />
                     </columnConstraints>
                     <rowConstraints>
-                        <RowConstraints maxHeight="20.0" minHeight="20.0" prefHeight="20.0" vgrow="SOMETIMES" />
-                      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="57.0" minHeight="20.0" prefHeight="57.0" vgrow="SOMETIMES" />
+                      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" prefHeight="276.0" vgrow="SOMETIMES" />
                       <RowConstraints maxHeight="10.0" minHeight="10.0" prefHeight="10.0" vgrow="SOMETIMES" />
                       <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="40.0" prefHeight="30.0" vgrow="SOMETIMES" />
                         <RowConstraints maxHeight="50.0" minHeight="20.0" prefHeight="10.0" vgrow="SOMETIMES" />
@@ -204,6 +204,7 @@
                            </padding>
                         </VBox>
                         <Label fx:id="balanceLabel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="17.0" prefWidth="56.0" text="Balance:  " GridPane.columnIndex="1" />
+                        <Button accessibleRole="SCROLL_PANE" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#loadFIleButtonAction" prefHeight="25.0" prefWidth="108.0" text="Load File" textOverrun="CLIP" GridPane.columnIndex="6" GridPane.columnSpan="2" />
                      </children>
                      <padding>
                         <Insets bottom="10.0" left="5.0" right="20.0" top="5.0" />
