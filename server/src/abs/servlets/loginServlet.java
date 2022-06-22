@@ -4,6 +4,7 @@ import abs.constants.Constants;
 import abs.utils.ServletUtils;
 import abs.utils.SessionUtils;
 import engine.customer.Customer;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,8 +12,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
+import static abs.constants.Constants.LOGIN_PAGE;
 import static abs.constants.Constants.USERNAME;
 
+@WebServlet(name = "loginServlet", urlPatterns = {"/loginShortResponse"})
 public class loginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -32,7 +35,7 @@ public class loginServlet extends HttpServlet {
             } else {
                 //normalize the username value
                 usernameFromParameter = usernameFromParameter.trim();
-
+                Customer temp=new Customer(usernameFromParameter, 0.0);
                 /*
                 One can ask why not enclose all the synchronizations inside the userManager object ?
                 Well, the atomic action we need to perform here includes both the question (isUserExists) and (potentially) the insertion
@@ -55,7 +58,7 @@ public class loginServlet extends HttpServlet {
                     }
                     else {
                         //add the new user to the users list
-                        userManager.put(usernameFromParameter, new Customer(usernameFromParameter, 0));
+                        userManager.put(usernameFromParameter, temp);
                         //set the username in a session so it will be available on each request
                         //the true parameter means that if a session object does not exists yet
                         //create a new one

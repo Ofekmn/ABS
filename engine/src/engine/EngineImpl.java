@@ -31,9 +31,13 @@ public class EngineImpl implements Engine, Serializable  {
 
 
     private final static String JAXB_XML_PACKAGE_NAME = "engine.generated";
+
     public EngineImpl(){
         currentYaz=1;
         isFileLoaded=false;
+        possibleCategories=new HashSet<>();
+        customers=new HashMap<>();
+        loans=new HashMap<>();
     }
 
 
@@ -100,6 +104,10 @@ public class EngineImpl implements Engine, Serializable  {
         JAXBContext jc= JAXBContext.newInstance(JAXB_XML_PACKAGE_NAME);
         Unmarshaller u=jc.createUnmarshaller();
         return (AbsDescriptor) u.unmarshal((in));
+    }
+
+    public void setCustomers(Map<String, Customer> customers) {
+        this.customers = customers;
     }
 
     @Override
@@ -171,6 +179,10 @@ public class EngineImpl implements Engine, Serializable  {
 
     public LoanDTO createLoanDTO(String Id) {
         return createLoanDTO(loans.get(Id));
+    }
+
+    public Map<String,Customer> getCustomersMap(){
+        return customers;
     }
 
     @Override
