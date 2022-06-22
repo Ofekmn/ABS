@@ -375,7 +375,7 @@ public class AdminController  {
             return;
         }
         try {
-            engine.loadFile(selectedFile);
+            engine.loadFileOld(selectedFile);
             String absolutePath=selectedFile.getAbsolutePath();
             mainController.getSelectedFileProperty().set(absolutePath);
             isFileSelected.set(true);

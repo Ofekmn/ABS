@@ -10,6 +10,9 @@ import engine.exception.xml.NameException;
 import engine.exception.xml.YazException;
 import engine.generated.*;
 import engine.loan.*;
+import engine.old.generated.AbsCustomer;
+import engine.old.generated.AbsDescriptor;
+import engine.old.generated.AbsLoan;
 import javafx.util.Pair;
 
 import javax.xml.bind.JAXBContext;
@@ -20,6 +23,8 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.util.Collections.copy;
 
 public class EngineImpl implements Engine, Serializable  {
 
@@ -44,7 +49,47 @@ public class EngineImpl implements Engine, Serializable  {
     @Override
     public int getCurrentYaz(){return currentYaz;}
     @Override
-    public void loadFile(File xmlFile) throws NameException, LoanFieldDoesNotExist, YazException {
+    public void loadFile(File xmlFile, String name) throws NameException, LoanFieldDoesNotExist, YazException {
+
+        try {
+            InputStream file = new FileInputStream(xmlFile);
+            AbsDescriptor descriptor = deserializeFrom(file);
+
+            Set<String> tempCategories = new HashSet<>(possibleCategories);
+            for (String absCategory : descriptor.getAbsCategories().getAbsCategory()) {
+                tempCategories.add(absCategory.trim());
+            }
+            Set<String> lowerCaseCategories = tempCategories.stream().map(String::toLowerCase).collect(Collectors.toSet());
+            Map<String, Loan> tempLoans = new HashMap<>(loans);
+            Set<String> lowerCaseLoans = loans.keySet().stream().map(String::toLowerCase).collect(Collectors.toSet());
+            for (AbsLoan absLoan : descriptor.getAbsLoans().getAbsLoan()) {
+                Loan tempLoan=new Loan(absLoan.getId().trim(), name.trim(),
+                        absLoan.getAbsCapital(),absLoan.getAbsTotalYazTime(), absLoan.getAbsPaysEveryYaz(),
+                        absLoan.getAbsIntristPerPayment(), absLoan.getAbsCategory().trim());
+
+
+                if(!lowerCaseCategories.contains(tempLoan.getCategory().toLowerCase(Locale.ROOT))) {
+                    throw new LoanFieldDoesNotExist(tempLoan.getId() ,"category", tempLoan.getCategory());
+                }
+                if(tempLoan.getTotalYaz()% tempLoan.getPaysEveryXYaz()!=0){
+                    throw new YazException(tempLoan.getId(), tempLoan.getTotalYaz(), tempLoan.getPaysEveryXYaz());
+                }
+                if(lowerCaseLoans.contains(tempLoan.getId().toLowerCase(Locale.ROOT))) {
+                    throw new NameException("loan", tempLoan.getId());
+                }
+                lowerCaseLoans.add(absLoan.getId().trim().toLowerCase(Locale.ROOT));
+                tempLoans.put(tempLoan.getId(),tempLoan);
+            }
+            possibleCategories=tempCategories;
+            loans=tempLoans;
+        }
+        catch(JAXBException | FileNotFoundException ignored){
+
+        }
+    }
+
+    @Override
+    public void loadFileOld(File xmlFile) throws NameException, LoanFieldDoesNotExist, YazException {
 
         try {
             InputStream file = new FileInputStream(xmlFile);
@@ -100,6 +145,7 @@ public class EngineImpl implements Engine, Serializable  {
 
         }
     }
+
     private AbsDescriptor deserializeFrom(InputStream in) throws JAXBException {
         JAXBContext jc= JAXBContext.newInstance(JAXB_XML_PACKAGE_NAME);
         Unmarshaller u=jc.createUnmarshaller();

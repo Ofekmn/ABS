@@ -69,7 +69,6 @@ public class loginServlet extends HttpServlet {
                         Gson gson= new Gson();
                         writer.println(gson.toJson(engineManager.createCustomerDTO(usernameFromParameter)));
                         response.setStatus(HttpServletResponse.SC_OK);
-                        //                        getServletContext().getRequestDispatcher().include(request, response);
                     }
                 }
             }

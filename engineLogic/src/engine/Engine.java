@@ -14,7 +14,8 @@ import java.util.Set;
 public interface Engine  {
 
 
-    public void loadFile(File file) throws NameException, LoanFieldDoesNotExist, YazException;
+    void loadFile(File file, String name) throws NameException, LoanFieldDoesNotExist, YazException;
+    void loadFileOld(File xmlFile) throws NameException, LoanFieldDoesNotExist, YazException;
     boolean isFileLoaded();
     List<LoanDTO> getAllLoans();
     List<CustomerDTO> getAllCustomersDetails();
