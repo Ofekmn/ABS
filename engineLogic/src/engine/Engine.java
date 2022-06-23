@@ -15,7 +15,7 @@ public interface Engine  {
 
 
     void loadFile(InputStream file, String name) throws NameException, LoanFieldDoesNotExist, YazException;
-    void loadFileOld(File xmlFile) throws NameException, LoanFieldDoesNotExist, YazException;
+    void loadFileOld(InputStream xmlFile) throws NameException, LoanFieldDoesNotExist, YazException;
     boolean isFileLoaded();
     List<LoanDTO> getAllLoans();
     List<CustomerDTO> getAllCustomersDetails();

@@ -14,13 +14,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import static abs.constants.Constants.USERNAME;
 
@@ -36,11 +34,13 @@ public class uploadFileServlet extends HttpServlet {
         String name= (String) req.getSession().getAttribute(USERNAME);
         try {
             synchronized (this) {
+//                String result = new BufferedReader(new InputStreamReader(file))    .lines().collect(Collectors.joining("\n"));
                 engineManger.loadFile(file, name);
             }
             PrintWriter writer=resp.getWriter();
             Gson gson= new Gson();
-            writer.println(gson.toJson(engineManger.createCustomerDTO(name)));
+            writer.println(gson.toJson(engineManger
+                    .createCustomerDTO(name)));
             resp.setStatus(HttpServletResponse.SC_OK);
 
         } catch (NameException e) {

@@ -10,9 +10,9 @@ import engine.exception.xml.NameException;
 import engine.exception.xml.YazException;
 import engine.generated.*;
 import engine.loan.*;
-import engine.old.generated.AbsCustomer;
-import engine.old.generated.AbsDescriptor;
-import engine.old.generated.AbsLoan;
+//import engine.old.generated.AbsCustomer;
+//import engine.old.generated.AbsDescriptor;
+//import engine.old.generated.AbsLoan;
 import javafx.util.Pair;
 
 import javax.xml.bind.JAXBContext;
@@ -85,71 +85,72 @@ public class EngineImpl implements Engine, Serializable  {
             possibleCategories=tempCategories;
             loans=tempLoans;
         }
-        catch(JAXBException  ignored){
-
+        catch(JAXBException e){
+            e.printStackTrace();
         }
     }
 
     @Override
-    public void loadFileOld(File xmlFile) throws NameException, LoanFieldDoesNotExist, YazException {
-
-        try {
-            InputStream file = new FileInputStream(xmlFile);
-            AbsDescriptor descriptor = deserializeFrom(file);
-            Set<String> tempCategories = new HashSet<>();
-            Set<String> lowerCaseCategories= new HashSet<>();
-            for (String absCategory:descriptor.getAbsCategories().getAbsCategory()) {
-                tempCategories.add(absCategory.trim());
-                lowerCaseCategories.add(absCategory.trim().toLowerCase(Locale.ROOT));
-            }
-            Map<String, Customer> tempCustomers = new HashMap<>();
-            Set<String> lowerCaseCustomers= new HashSet<>();
-            for (AbsCustomer absCustomer : descriptor.getAbsCustomers().getAbsCustomer()) {
-                Customer tempCustomer = new Customer(absCustomer.getName().trim(), absCustomer.getAbsBalance());
-                if (lowerCaseCustomers.contains(tempCustomer.getName().toLowerCase(Locale.ROOT))) {
-                    throw new NameException("customer", tempCustomer.getName());
-                }
-                lowerCaseCustomers.add(absCustomer.getName().trim().toLowerCase(Locale.ROOT));
-                tempCustomers.put(tempCustomer.getName(), tempCustomer);
-            }
-            Map<String,Loan> tempLoans = new HashMap<>();
-            Set<String> lowerCaseLoans= new HashSet<>();
-            for (AbsLoan absLoan : descriptor.getAbsLoans().getAbsLoan()) {
-                Loan tempLoan=new Loan(absLoan.getId().trim(), absLoan.getAbsOwner().trim(),
-                        absLoan.getAbsCapital(),absLoan.getAbsTotalYazTime(), absLoan.getAbsPaysEveryYaz(),
-                        absLoan.getAbsIntristPerPayment(), absLoan.getAbsCategory().trim());
-
-
-                if(!lowerCaseCategories.contains(tempLoan.getCategory().toLowerCase(Locale.ROOT))) {
-                    throw new LoanFieldDoesNotExist(tempLoan.getId() ,"category", tempLoan.getCategory());
-                }
-                if(!lowerCaseCustomers.contains(tempLoan.getOwner().toLowerCase(Locale.ROOT))){
-                    throw new LoanFieldDoesNotExist(tempLoan.getId(), "customer", tempLoan.getOwner());
-                }
-                if(tempLoan.getTotalYaz()% tempLoan.getPaysEveryXYaz()!=0){
-                    throw new YazException(tempLoan.getId(), tempLoan.getTotalYaz(), tempLoan.getPaysEveryXYaz());
-                }
-                if(lowerCaseLoans.contains(tempLoan.getId().toLowerCase(Locale.ROOT))) {
-                    throw new NameException("loan", tempLoan.getId());
-                }
-                lowerCaseLoans.add(absLoan.getId().trim().toLowerCase(Locale.ROOT));
-                tempCustomers.get(tempLoan.getOwner()).getBorrowerLoans().add(tempLoan.getId());
-                tempLoans.put(tempLoan.getId(),tempLoan);
-            }
-            isFileLoaded=true;
-            currentYaz=1;
-            possibleCategories=tempCategories;
-            loans=tempLoans;
-            customers=tempCustomers;
-
-        }
-        catch(JAXBException | FileNotFoundException ignored){
-
-        }
+    public void loadFileOld(InputStream file) throws NameException, LoanFieldDoesNotExist, YazException {
+        return;
+//        try {
+////            InputStream file = new FileInputStream(xmlFile);
+//            AbsDescriptor descriptor = deserializeFrom(file);
+//            Set<String> tempCategories = new HashSet<>();
+//            Set<String> lowerCaseCategories= new HashSet<>();
+//            for (String absCategory:descriptor.getAbsCategories().getAbsCategory()) {
+//                tempCategories.add(absCategory.trim());
+//                lowerCaseCategories.add(absCategory.trim().toLowerCase(Locale.ROOT));
+//            }
+//            Map<String, Customer> tempCustomers = new HashMap<>();
+//            Set<String> lowerCaseCustomers= new HashSet<>();
+//            for (AbsCustomer absCustomer : descriptor.getAbsCustomers().getAbsCustomer()) {
+//                Customer tempCustomer = new Customer(absCustomer.getName().trim(), absCustomer.getAbsBalance());
+//                if (lowerCaseCustomers.contains(tempCustomer.getName().toLowerCase(Locale.ROOT))) {
+//                    throw new NameException("customer", tempCustomer.getName());
+//                }
+//                lowerCaseCustomers.add(absCustomer.getName().trim().toLowerCase(Locale.ROOT));
+//                tempCustomers.put(tempCustomer.getName(), tempCustomer);
+//            }
+//            Map<String,Loan> tempLoans = new HashMap<>();
+//            Set<String> lowerCaseLoans= new HashSet<>();
+//            for (AbsLoan absLoan : descriptor.getAbsLoans().getAbsLoan()) {
+//                Loan tempLoan=new Loan(absLoan.getId().trim(), absLoan.getAbsOwner().trim(),
+//                        absLoan.getAbsCapital(),absLoan.getAbsTotalYazTime(), absLoan.getAbsPaysEveryYaz(),
+//                        absLoan.getAbsIntristPerPayment(), absLoan.getAbsCategory().trim());
+//
+//
+//                if(!lowerCaseCategories.contains(tempLoan.getCategory().toLowerCase(Locale.ROOT))) {
+//                    throw new LoanFieldDoesNotExist(tempLoan.getId() ,"category", tempLoan.getCategory());
+//                }
+//                if(!lowerCaseCustomers.contains(tempLoan.getOwner().toLowerCase(Locale.ROOT))){
+//                    throw new LoanFieldDoesNotExist(tempLoan.getId(), "customer", tempLoan.getOwner());
+//                }
+//                if(tempLoan.getTotalYaz()% tempLoan.getPaysEveryXYaz()!=0){
+//                    throw new YazException(tempLoan.getId(), tempLoan.getTotalYaz(), tempLoan.getPaysEveryXYaz());
+//                }
+//                if(lowerCaseLoans.contains(tempLoan.getId().toLowerCase(Locale.ROOT))) {
+//                    throw new NameException("loan", tempLoan.getId());
+//                }
+//                lowerCaseLoans.add(absLoan.getId().trim().toLowerCase(Locale.ROOT));
+//                tempCustomers.get(tempLoan.getOwner()).getBorrowerLoans().add(tempLoan.getId());
+//                tempLoans.put(tempLoan.getId(),tempLoan);
+//            }
+//            isFileLoaded=true;
+//            currentYaz=1;
+//            possibleCategories=tempCategories;
+//            loans=tempLoans;
+//            customers=tempCustomers;
+//
+//        }
+//        catch(JAXBException e){
+//            e.printStackTrace();
+//        }
     }
 
     private AbsDescriptor deserializeFrom(InputStream in) throws JAXBException {
-        JAXBContext jc= JAXBContext.newInstance(JAXB_XML_PACKAGE_NAME);
+        JAXBContext jc= JAXBContext.newInstance("engine.generated");
+        //JAXB_XML_PACKAGE_NAME
         Unmarshaller u=jc.createUnmarshaller();
         return (AbsDescriptor) u.unmarshal((in));
     }
