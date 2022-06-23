@@ -22,7 +22,8 @@ public class Constants {
 
     public final static String LOGIN_PAGE = FULL_SERVER_PATH + "/loginShortResponse";
     public final static String UPLOAD_FILE_PAGE = FULL_SERVER_PATH + "/upload-file";
-    public final static String USERS_LIST = FULL_SERVER_PATH + "/userslist";
+    public final static String CHARGE_PAGE = FULL_SERVER_PATH + "/charge";
+    public final static String WITHDRAW_PAGE = FULL_SERVER_PATH + "/withdraw";
 
     // GSON instance
     public final static Gson GSON_INSTANCE = new Gson();

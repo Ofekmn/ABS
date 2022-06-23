@@ -16,6 +16,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -31,6 +32,7 @@ import org.controlsfx.control.CheckComboBox;
 import org.controlsfx.control.Notifications;
 import org.jetbrains.annotations.NotNull;
 import ui.MainController;
+import ui.util.Constants;
 import ui.util.HttpClientUtil;
 
 
@@ -44,6 +46,7 @@ import java.util.stream.Collectors;
 
 import static ui.util.Constants.UPLOAD_FILE_PAGE;
 import static ui.util.Constants.GSON_INSTANCE;
+import static ui.util.Constants.CHARGE_PAGE;
 
 
 public class CustomerController  {
@@ -135,13 +138,27 @@ public class CustomerController  {
     @FXML CheckBox maximumOwnershipCheckBox;
     @FXML TextField maximumOwnershipTextField;
     @FXML Label maximumOwnershipInvalidLabel;
-
     @FXML ProgressBar scrambleProgressBar;
     @FXML Label scrambleProgressPercent;
 
     //Scramble:
     @FXML GridPane scrambleGridPane;
     @FXML Label filterResultLabel;
+
+    @FXML private TextField NewLoanNameTF;
+    @FXML private Label LoanNameErrorLabel;
+    @FXML private Label AmountNewLoanErrorLabel;
+    @FXML private Label PayEveryYazLoanErrorLabel;
+    @FXML private Label InterestLoanErrorLabel;
+    @FXML private Label TotalYazLoanErrorLabel;
+    @FXML private TextField NewCategoryTF;
+    @FXML private TextField PayEveryYazNewLoanTF;
+    @FXML private TextField InterestNewLoanTF;
+    @FXML private TextField TotalYazNewLoanTF;
+    @FXML private Label scrambleProgressPercent1;
+    @FXML private ProgressBar scrambleProgressBar1;
+    @FXML private TextField AmountNewLoanTF;
+    @FXML private ComboBox<String> NewLoanCategoryCB;
 
     //Table:
     @FXML TableView <LoanDTO> filteredLoansTable;
@@ -203,13 +220,13 @@ public class CustomerController  {
     @FXML Label paymentInvalidInput;
     @FXML Label paymentNotEnoughMoneyLabel;
 
-    private Stage primaryStage;
+
     private ScrollPane scrollPane;
     private Engine engine;
     private MainController mainController;
     private CustomerDTO customer;
     private int currentYaz;
-
+    private Stage primaryStage;
     private List<LoanDTO> lenderList;
     private List<LoanDTO> loanerList;
     private List<TransactionDTO> transactionList;
@@ -237,6 +254,8 @@ public class CustomerController  {
 
     @FXML
     private void initialize(){
+        NewLoanCategoryCB.getItems().add("New Category");
+        NewCategoryTF.visibleProperty().bind(NewLoanCategoryCB.valueProperty().isEqualTo("New Category"));
         loanerTable.setPlaceholder(new Label("You don't borrow from any loan."));
         lenderTable.setPlaceholder(new Label("You don't lend to any loan"));
         filteredLoansTable.setPlaceholder(new Label("There are no loans that match your criteria."));
@@ -384,6 +403,19 @@ public class CustomerController  {
         });
     }
 
+    @FXML
+    void NewLoanBtn(ActionEvent event) {
+        int amount= filterAmount(AmountNewLoanTF,AmountNewLoanErrorLabel);
+        String category= NewLoanCategoryCB.getSelectionModel().getSelectedItem();
+        if(category.equals("New Category"))
+            category=NewCategoryTF.getText();
+        int interest= filterMaximumOwnership(InterestNewLoanTF, InterestLoanErrorLabel);
+        int Totalyaz= filterField(TotalYazNewLoanTF, TotalYazLoanErrorLabel);
+        int payEveryYaz= filterField(PayEveryYazNewLoanTF, PayEveryYazLoanErrorLabel);
+        if(amount ==INVALID || interest==INVALID || Totalyaz== INVALID || payEveryYaz==INVALID){
+            return;
+        }
+    }
 
     private void bindLoansActiveRisk(TableColumn<LoanDTO, Integer> loanStartingYazColumn, TableColumn<LoanDTO,Integer> loanNextPaymentYazColumn,
                                      TableColumn<LoanDTO, List<Integer>> loansPaymentYazColumn, TableColumn<LoanDTO, List<Double>> loansPaymentAmountColumn,
@@ -525,10 +557,6 @@ public class CustomerController  {
         });
     }
 
-    public void setPrimaryStage(Stage primaryStage) {
-        this.primaryStage = primaryStage;
-    }
-
     @FXML
     public void loadFIleButtonAction() throws IOException, CloneNotSupportedException {
         FileChooser fileChooser = new FileChooser();
@@ -541,7 +569,7 @@ public class CustomerController  {
 
         RequestBody body =
                 new MultipartBody.Builder()
-                        .addFormDataPart("file1", selectedFile.getName(), RequestBody.create(selectedFile, MediaType.parse("application/xml")))
+                        .addFormDataPart("file1", selectedFile.getName(), RequestBody.create(selectedFile, MediaType.parse("text/xml")))
                         //.addFormDataPart("key1", "value1") // you can add multiple, different parts as needed
                         .build();
 
@@ -549,32 +577,18 @@ public class CustomerController  {
                 .url(UPLOAD_FILE_PAGE)
                 .post(body)
                 .build();
-        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
-
-            @Override
-            public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                Platform.runLater(() ->
-                        notification("Error: ", e.getMessage())
-                );
-            }
-
-            @Override
-            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                String responseBody = response.body().string();
-                if (response.code() != 200) {
-                    Platform.runLater(() ->
-                            notification("Invalid File", responseBody)
-                    );
-                } else {
-                    Platform.runLater(() -> {
-
-                        CustomerDTO loggedIn=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                        updateCustomer(loggedIn);
-
-                    });
-                }
-            }
-        });
+        Response response=HttpClientUtil.runSync(request);
+        String responseBody = response.body().string();
+        if (response.code() != 200) {
+            Platform.runLater(() ->
+                    notification("Invalid File", responseBody)
+            );
+        } else {
+            Platform.runLater(() -> {
+                CustomerDTO loggedIn=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                updateCustomer(loggedIn);
+            });
+        }
 
 //        try {
 //            engine.loadFile(selectedFile);
@@ -604,6 +618,9 @@ public class CustomerController  {
 
     }
 
+    public void setPrimaryStage(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+    }
 
     public ScrollPane getScrollPane() {
         return scrollPane;
@@ -696,11 +713,25 @@ public class CustomerController  {
             if(integer <= 0 )
                 notification("Invalid Input", integer + " is not a positive integer");
             else {
-                engine.charge(customer.getName(), integer);
-                notification("Charging Succeeded!", integer + " were added to your account");
-                chargeTextField.clear();
-                updateCustomer(engine.createCustomerDTO(customer.getName()));
-                mainController.updateCustomersAdmin();
+                MediaType mediaType = MediaType.parse("text/plain");
+                RequestBody body = RequestBody.create(mediaType, "");
+                Request request = new Request.Builder()
+                        .url(Constants.CHARGE_PAGE)
+                        .method("PUT", body)
+                        .addHeader("amount", input).build();
+                try {
+                    Response response=HttpClientUtil.runSync(request);
+                    String responseBody=response.body().string();
+                    if(response.code()==200) {
+                        notification("Charging Succeeded!", integer + " were charged into your account.");
+                        customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        updateCustomer(customer);
+                        chargeTextField.clear();
+                        mainController.updateCustomersAdmin();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
 
         }
@@ -709,7 +740,7 @@ public class CustomerController  {
         }
         chargeTextField.clear();
     }
-
+    @FXML
     public void withdrawButtonAction() {
         String input=withdrawTextField.getText();
         try {
@@ -720,18 +751,31 @@ public class CustomerController  {
                 notification("Invalid Input", integer + " is more than the balance in your account (" +
                         customer.getCurrentAmount() + ").");
             else {
-                engine.withdraw(customer.getName(), integer);
-                notification("Withdrawing Succeeded!", integer + " were withdrawn your account.");
-                withdrawTextField.clear();
-                updateCustomer(engine.createCustomerDTO(customer.getName()));
-                mainController.updateCustomersAdmin();
+                MediaType mediaType = MediaType.parse("text/plain");
+                RequestBody body = RequestBody.create(mediaType, "");
+                Request request = new Request.Builder()
+                        .url(Constants.WITHDRAW_PAGE)
+                        .method("PUT", body)
+                        .addHeader("amount", input).build();
+                try {
+                    Response response=HttpClientUtil.runSync(request);
+                    String responseBody=response.body().string();
+                    if(response.code()==200) {
+                        notification("Withdrawing Succeeded!", integer + " were withdrawn from your account.");
+                        customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        updateCustomer(customer);
+                        withdrawTextField.clear();
+                        mainController.updateCustomersAdmin();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-
         }
         catch (NumberFormatException e){
             notification("Invalid Input", input+  " is not an integer.");
         }
-        chargeTextField.clear();
+        withdrawTextField.clear();
     }
 
 
@@ -747,14 +791,14 @@ public class CustomerController  {
     @FXML
     public void filter() {
         clearInvalid();
-        int amount= filterAmount();
+        int amount= filterAmount(amountTextField,amountInvalidLabel);
         Set<String> categories= new HashSet<>(categoriesCheckComboBox.getCheckModel().getCheckedItems());
         int interest= filterField(minimumInterestTextField, minimumInterestInvalidLabel);
         int yaz= filterField(minimumTotalYazTextField, minimumTotalYazInvalidLabel);
         int maximumOpenLoans= filterField(maximumOpenLoansTextField, maximumOpenLoansInvalidLabel);
         if(maximumOpenLoans==0)
             maximumOpenLoans=Integer.MAX_VALUE;
-        int maximumOwnership= filterMaximumOwnership();
+        int maximumOwnership= filterMaximumOwnership(maximumOwnershipTextField,maximumOwnershipInvalidLabel);
         if(amount ==INVALID || interest==INVALID || yaz== INVALID || maximumOpenLoans==INVALID ||maximumOwnership==INVALID){
             return;
         }
@@ -809,24 +853,24 @@ public class CustomerController  {
     }
 
 
-    private int filterAmount(){
+    private int filterAmount(TextField textField, Label invalidLabel){
         try{
-            int amount=Integer.parseInt(amountTextField.getText());
+            int amount=Integer.parseInt(textField.getText());
             if(amount<=0) {
-                amountInvalidLabel.setText("must be a positive integer");
+                invalidLabel.setText("must be a positive integer");
                 return INVALID;
             }
             if(amount > customer.getCurrentAmount()) {
-                amountInvalidLabel.setText("Not enough money in your account.");
+                invalidLabel.setText("Not enough money in your account.");
                 return INVALID;
             }
             return amount;
         }
         catch(NumberFormatException e) {
-            if (amountTextField.getText().equals(""))
-                amountInvalidLabel.setText("This field is mandatory.");
+            if (textField.getText().equals(""))
+                invalidLabel.setText("This field is mandatory.");
             else{
-                amountInvalidLabel.setText("That's not an integer.");
+                invalidLabel.setText("That's not an integer.");
             }
             return INVALID;
         }
@@ -836,12 +880,12 @@ public class CustomerController  {
         if(textField.isDisabled())
             return 0;
         try {
-            int interest=Integer.parseInt(textField.getText());
-            if(interest<=0) {
-                invalidLabel.setText("must be a positive integer.");
+            int num=Integer.parseInt(textField.getText());
+            if(num<=0) {
+                invalidLabel.setText("must be a positive integer");
                 return INVALID;
             }
-            return interest;
+            return num;
         }
         catch(NumberFormatException e) {
             invalidLabel.setText("that's not an integer.");
@@ -849,18 +893,18 @@ public class CustomerController  {
         }
     }
 
-    private int filterMaximumOwnership(){
-        if (maximumOwnershipTextField.isDisabled())
+    private int filterMaximumOwnership(TextField textField, Label invalidLabel){
+        if (textField.isDisabled())
             return 100;
         try {
-            int Ownership = Integer.parseInt(maximumOwnershipTextField.getText());
+            int Ownership = Integer.parseInt(textField.getText());
             if (Ownership <= 0 || Ownership>100) {
-                maximumOwnershipInvalidLabel.setText("must be an integer between 1 to 100.");
+                invalidLabel.setText("must be an integer between 1 to 100.");
                 return INVALID;
             }
             return Ownership;
         } catch (NumberFormatException e) {
-            maximumOwnershipInvalidLabel.setText("that's not an integer.");
+            invalidLabel.setText("that's not an integer.");
             return INVALID;
         }
     }
