@@ -24,8 +24,6 @@ import java.math.MathContext;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static java.util.Collections.copy;
-
 public class EngineImpl implements Engine, Serializable  {
 
     private int currentYaz;
@@ -88,6 +86,20 @@ public class EngineImpl implements Engine, Serializable  {
         catch(JAXBException e){
             e.printStackTrace();
         }
+    }
+
+    public void createNewLoan(String ownerName, String loanID, int amount, String category, int payEveryYaz, int interest, int totalYaz) throws NameException, YazException {
+        Loan loan= new Loan(loanID, ownerName, amount, totalYaz, payEveryYaz, interest, category);
+        if(loan.getTotalYaz()% loan.getPaysEveryXYaz()!=0){
+            throw new YazException(loan.getId(), loan.getTotalYaz(), loan.getPaysEveryXYaz());
+        }
+        Set<String> lowerCaseLoans = loans.keySet().stream().map(String::toLowerCase).collect(Collectors.toSet());
+        if(lowerCaseLoans.contains(loanID.trim().toLowerCase(Locale.ROOT)))
+            throw new NameException("loan", loan.getId());
+        Set<String> lowerCaseCategories = possibleCategories.stream().map(String::toLowerCase).collect(Collectors.toSet());
+        if(!lowerCaseCategories.contains(category.trim().toLowerCase(Locale.ROOT)))
+            possibleCategories.add(category);
+        loans.put(loanID, loan);
     }
 
     @Override
