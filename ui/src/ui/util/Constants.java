@@ -25,6 +25,7 @@ public class Constants {
     public final static String CHARGE_PAGE = FULL_SERVER_PATH + "/charge";
     public final static String WITHDRAW_PAGE = FULL_SERVER_PATH + "/withdraw";
     public final static String NEW_LOAN_PAGE = FULL_SERVER_PATH + "/createLoan";
+    public final static String FILTER_PAGE= FULL_SERVER_PATH +"/filter";
     // GSON instance
     public final static Gson GSON_INSTANCE = new Gson();
 }

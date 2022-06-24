@@ -1,8 +1,10 @@
 package ui.customer;
 
+import com.google.gson.reflect.TypeToken;
 import dto.customerDTO.CustomerDTO;
 import dto.customerDTO.NotificationDTO;
 import dto.customerDTO.TransactionDTO;
+import dto.FilterDTO;
 import dto.loanDTO.LoanDTO;
 import engine.Engine;
 import javafx.application.Platform;
@@ -23,11 +25,9 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import okhttp3.*;
-import okio.BufferedSink;
 import org.controlsfx.control.CheckComboBox;
 import org.controlsfx.control.Notifications;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import ui.MainController;
 import ui.util.Constants;
 import ui.util.HttpClientUtil;
@@ -35,10 +35,8 @@ import ui.util.HttpClientUtil;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.lang.reflect.Type;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static ui.util.Constants.*;
@@ -484,13 +482,14 @@ public class CustomerController  {
                 String responseBody = response.body().string();
                 if (response.code() != 200) {
                     Platform.runLater(() ->
-                            notification("Invalid File", responseBody)
+                            notification("Invalid Loan", responseBody)
                     );
                 }
                 else {
                     Platform.runLater(() -> {
                         CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                        updateCustomer(loggedIn);
+                        updateCustomer(loggedIn);//TODO::ADD RESETS TO THE NEW LOAN VIEW
+                        notification("Success!", "New loan created");
                     });
                 }
             }
@@ -841,7 +840,7 @@ public class CustomerController  {
                             String responseBody = response.body().string();
                             if (response.code() != 200) {
                                 Platform.runLater(() ->
-                                        notification("Invalid File", responseBody)
+                                        notification("Invalid Input", responseBody)
                                 );
                             } else {
                                 Platform.runLater(() -> {
@@ -925,8 +924,13 @@ public class CustomerController  {
 
     @FXML
     public void filter() {
+        //getting values
         clearInvalid();
         int amount= filterAmount(amountTextField,amountInvalidLabel);
+        if(amount > customer.getCurrentAmount()) {
+            amountInvalidLabel.setText("Not enough money in your account.");
+            return;
+        }
         Set<String> categories= new HashSet<>(categoriesCheckComboBox.getCheckModel().getCheckedItems());
         int interest= filterField(minimumInterestTextField, minimumInterestInvalidLabel);
         int yaz= filterField(minimumTotalYazTextField, minimumTotalYazInvalidLabel);
@@ -937,35 +941,54 @@ public class CustomerController  {
         if(amount ==INVALID || interest==INVALID || yaz== INVALID || maximumOpenLoans==INVALID ||maximumOwnership==INVALID){
             return;
         }
-        maximumLoanOwnership=maximumOwnership;
-        investedAmount=amount;
-        scrambleProgressBar.setVisible(true);
-        ScrambleTask task=new ScrambleTask(engine, customer.getName(), categories, interest,yaz, maximumOpenLoans);
-        scrambleProgressBar.progressProperty().bind(task.progressProperty());
-        Thread thread= new Thread(task);
-        taskToProgress(task,()-> {isFiltered.set(true);
-        });
-        thread.start();
-        task.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if(newValue!=null)
-                filteredLoans=newValue;
-        });
+        //filter request:
+        FilterDTO filterDTO=new FilterDTO(amount, categories, interest, yaz, maximumOpenLoans);
 
+        RequestBody body=RequestBody.create(MediaType.parse("application/json"), GSON_INSTANCE.toJson(filterDTO));
+        Request request = new Request.Builder()
+                .url(FILTER_PAGE)
+                .post(body)
+                .build();
+        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Platform.runLater(() ->
+                        notification("Error", "Something went wrong: " + e.getMessage())
+                );
+            }
 
-        filteredLoans=engine.filteredLoans(customer.getName(), categories, interest, yaz, maximumOpenLoans);
-        filteredLoansObservableList = FXCollections.observableArrayList(filteredLoans);
-        filteredLoansTable.setItems(filteredLoansObservableList);
-        loansCheckComboBox.getItems().clear();
-        loansCheckComboBox.getCheckModel().clearChecks();
-        loansCheckComboBox.getItems().setAll(filteredLoans.stream().map(LoanDTO::getId).collect(Collectors.toList()));
-        if(filteredLoans.isEmpty()){
-            loansCheckComboBox.setDisable(true);
-            scrambleButton.setDisable(true);
-        }
-        else {
-            loansCheckComboBox.setDisable(false);
-            scrambleButton.setDisable(false);
-        }
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                if (response.code() != 200) {
+                    Platform.runLater(() ->
+                            notification("Invalid Filter", responseBody)
+                    );
+                }
+                else {
+                    Platform.runLater(() -> {
+                        Type listType = new TypeToken<List<LoanDTO>>() {}.getType();
+                        filteredLoans = GSON_INSTANCE.fromJson(responseBody, listType);
+                        maximumLoanOwnership=maximumOwnership;
+                        investedAmount=amount;
+                        filteredLoansObservableList = FXCollections.observableArrayList(filteredLoans);
+                        filteredLoansTable.setItems(filteredLoansObservableList);
+                        loansCheckComboBox.getItems().clear();
+                        loansCheckComboBox.getCheckModel().clearChecks();
+                        loansCheckComboBox.getItems().setAll(filteredLoans.stream().map(LoanDTO::getId).collect(Collectors.toList()));
+                        isFiltered.set(true);
+                        if(filteredLoans.isEmpty()){
+                            loansCheckComboBox.setDisable(true);
+                            scrambleButton.setDisable(true);
+                        }
+                        else {
+                            loansCheckComboBox.setDisable(false);
+                            scrambleButton.setDisable(false);
+                        }
+                    });
+                }
+            }
+        });
     }
 
     public void taskToProgress(ScrambleTask filteredNewLoans, Runnable onFinish){
@@ -993,10 +1016,6 @@ public class CustomerController  {
             int amount=Integer.parseInt(textField.getText());
             if(amount<=0) {
                 invalidLabel.setText("must be a positive integer");
-                return INVALID;
-            }
-            if(amount > customer.getCurrentAmount()) {
-                invalidLabel.setText("Not enough money in your account.");
                 return INVALID;
             }
             return amount;
