@@ -9,39 +9,39 @@ import java.util.Map;
 public class LoanDTO {
 
     private final String id;
-    private final String owner;
+    private String owner;
     private final String category;
     private final double amount;
     private final int totalYaz;
     private final int paysEveryYaz;
     private final double interestPerPayment;
-    private final String status;
-    private final Map<String, Double> lenders;
-    private final List<String> lendersName;
-    private final List<Double> lendersAmount;
-    private final double amountRaised;
-    private final double amountLeftToActive;
-    private final int startingYaz;//p
-    private final int nextPaymentYaz;
-    private final List <Integer> paymentYaz;
-    private final List <Double> paymentAmount;
-    private final List<Double> paymentInterest;
-    private final List<Double> paymentAmountWithInterest;
-    private final double totalPaidAmount;
-    private final double totalPaidInterest;
-    private final double totalAmountLeftToPay;
-    private final double totalInterestLeftToPay;
-    private final Pair<Integer, Double> delayedPayments;
-    private final int finishYaz;
-    private final boolean isPayingPeriod;
+    private String status;
+    private Map<String, Double> lenders;
+    private List<String> lendersName;
+    private List<Double> lendersAmount;
+    private double amountRaised;
+    private double amountLeftToActive;
+    private int startingYaz;//p
+    private int nextPaymentYaz;
+    private List <Integer> paymentYaz;
+    private List <Double> paymentAmount;
+    private List<Double> paymentInterest;
+    private List<Double> paymentAmountWithInterest;
+    private double totalPaidAmount;
+    private double totalPaidInterest;
+    private double totalAmountLeftToPay;
+    private double totalInterestLeftToPay;
+    private Pair<Integer, Double> delayedPayments;
+    private int finishYaz;
+    private boolean isPayingPeriod;
 
-    private final String amountRaisedString;
-    private final String amountLeftActiveString;
-    private final String totalPaidAmountString;
-    private final String totalPaidInterestString;
-    private final String totalAmountLeftToPayString;
-    private final String totalInterestLeftToPayString;
-    private final String delayedPaymentsAmountString;
+    private String amountRaisedString;
+    private String amountLeftActiveString;
+    private String totalPaidAmountString;
+    private String totalPaidInterestString;
+    private String totalAmountLeftToPayString;
+    private String totalInterestLeftToPayString;
+    private String delayedPaymentsAmountString;
 
 
     public LoanDTO(String id, String owner, String category, double amount, int totalYaz, int paysEveryYaz, double interestPerPayment, String status, Map<String, Double> lenders,
@@ -89,6 +89,15 @@ public class LoanDTO {
         totalInterestLeftToPayString=String.format("%.1f", totalInterestLeftToPay);
         delayedPaymentsAmountString=String.format("%.1f", delayedPayments.getValue());
 
+    }
+
+    public LoanDTO(String id, String category, double amount, int totalYaz, int paysEveryYaz, double interestPerPayment) {
+        this.id = id;
+        this.category = category;
+        this.amount = amount;
+        this.totalYaz = totalYaz;
+        this.paysEveryYaz = paysEveryYaz;
+        this.interestPerPayment = interestPerPayment;
     }
 
     public String getId() {

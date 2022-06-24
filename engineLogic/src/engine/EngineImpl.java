@@ -99,6 +99,7 @@ public class EngineImpl implements Engine, Serializable  {
         Set<String> lowerCaseCategories = possibleCategories.stream().map(String::toLowerCase).collect(Collectors.toSet());
         if(!lowerCaseCategories.contains(category.trim().toLowerCase(Locale.ROOT)))
             possibleCategories.add(category);
+        customers.get(ownerName).getBorrowerLoans().add(loanID);
         loans.put(loanID, loan);
     }
 

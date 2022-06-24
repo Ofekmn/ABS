@@ -5,15 +5,10 @@ import dto.customerDTO.NotificationDTO;
 import dto.customerDTO.TransactionDTO;
 import dto.loanDTO.LoanDTO;
 import engine.Engine;
-import engine.exception.xml.LoanFieldDoesNotExist;
-import engine.exception.xml.NameException;
-import engine.exception.xml.YazException;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringExpression;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -28,9 +23,11 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import okhttp3.*;
+import okio.BufferedSink;
 import org.controlsfx.control.CheckComboBox;
 import org.controlsfx.control.Notifications;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import ui.MainController;
 import ui.util.Constants;
 import ui.util.HttpClientUtil;
@@ -44,9 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static ui.util.Constants.UPLOAD_FILE_PAGE;
-import static ui.util.Constants.GSON_INSTANCE;
-import static ui.util.Constants.CHARGE_PAGE;
+import static ui.util.Constants.*;
 
 
 public class CustomerController  {
@@ -206,6 +201,52 @@ public class CustomerController  {
     @FXML TableColumn<LoanDTO, Integer> payLoanDelayedPaymentsNumber;
     @FXML TableColumn<LoanDTO, String> payLoanDelayedPaymentsSum;
 
+    //Buy And Sell Tables
+    @FXML private TableView<LoanDTO> BuyTable;
+    @FXML private TableColumn<LoanDTO, String> buyLoanIDColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanOwnerColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanCategoryColumn;
+    @FXML private TableColumn<LoanDTO, Double> buyLoanAmountColumn;
+    @FXML private TableColumn<LoanDTO, Double> buyLoanIntrestColumn;
+    @FXML private TableColumn<LoanDTO, Integer> buyLoanYazColumn;
+    @FXML private TableColumn<LoanDTO, Integer> buyLoanPaymentRateColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanStatusColumn;
+    @FXML private TableColumn<LoanDTO, List<String>> buyLoanLenderNameColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> buyLoanLenderAmountColumn;
+    @FXML private TableColumn<LoanDTO, Integer> buyLoanStartingYazColumn;
+    @FXML private TableColumn<LoanDTO, Integer> buyLoanNextPaymentYazColumn;
+    @FXML private TableColumn<LoanDTO, List<Integer>> buyLoanPaymentYazColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> buyLoanPaymentAmountColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> buyLoanPaymentInterestColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> buyLoanPaymentsTotalColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanTotalPaidAmountColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanTotalPaidInterestColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanTotalAmountLeftToPayColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanTotalInterestLeftToPayColumn;
+
+    @FXML private TableView<LoanDTO> sellLoansTable;
+    @FXML private TableColumn<LoanDTO, String> sellLoanIDColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanOwnerColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanCategoryColumn;
+    @FXML private TableColumn<LoanDTO, Double> sellLoanAmountColumn;
+    @FXML private TableColumn<LoanDTO, Double> sellLoanInterestColumn;
+    @FXML private TableColumn<LoanDTO, Integer> sellLoanYazColumn;
+    @FXML private TableColumn<LoanDTO, Integer> sellLoanPaymentRateColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanStatusColumn;
+    @FXML private TableColumn<LoanDTO, List<String>> sellLoanLendersNameColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> sellLoanLendersAmountColumn;
+    @FXML private TableColumn<LoanDTO, Integer> sellLoanStartingYazColumn;
+    @FXML private TableColumn<LoanDTO, Integer> sellLoanNextPaymentColumn;
+    @FXML private TableColumn<LoanDTO, List<Integer>> sellLoanPaymentYazColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> sellLoanPaymentAmountColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> sellLoanPaymentInterestColumn;
+    @FXML private TableColumn<LoanDTO, List<Double>> sellLoanPaymentTotalColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanTotalPaidAmountColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanTotalPaidInterestColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanTotalAmountLeftToPayColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanTotalInterestLeftToPayColumn;
+
+
     //Notification Table:
     @FXML TableView<NotificationDTO> notificationTable;
     @FXML TableColumn<NotificationDTO, String> notificationIdColumn;
@@ -262,11 +303,15 @@ public class CustomerController  {
         notificationTable.setPlaceholder(new Label ("There are no notifications yet."));
         transactionTable.setPlaceholder(new Label ("There are no transactions yet."));
         paymentTable.setPlaceholder(new Label("There are no loans to pay for."));
+        BuyTable.setPlaceholder(new Label("There are no loans to buy."));
+        sellLoansTable.setPlaceholder(new Label("There are no loans to sell."));
         bindLoansGeneral(loanerIdColumn, loanerOwnerColumn, loanerAmountColumn, loanerCategoryColumn, loanerInterestColumn, loanerTotalYazColumn, loanerPaymentRateColumn, loanerStatusColumn, loanerLenderListName, loanerLenderListAmount);
         bindLoansGeneral(lenderIdColumn, lenderOwnerColumn, lenderAmountColumn, lenderCategoryColumn, lenderInterestColumn, lenderTotalYazColumn, lenderPaymentRateColumn, lenderStatusColumn, lenderLenderListName, lenderLenderListAmount);
         bindLoansGeneral(filteredLoansIdColumn, filteredLoansOwnerColumn, filteredLoansAmountColumn, filteredLoansCategoryColumn, filteredLoansInterestColumn, filteredLoansTotalYazColumn,
                 filteredLoansPaymentRateColumn, filteredLoansStatusColumn, filteredLoansLenderListName, filteredLoansLenderListAmount);
         bindLoansGeneral(payLoanIdColumn, payLoanOwnerColumn, payLoanAmountColumn, payLoanCategoryColumn, payLoanInterestColumn, payLoanYazColumn, payLoanPaymentRateColumn, payLoanStatusColumn, payLoansLenderListName, payLoansLenderListAmount);
+        bindLoansGeneral(buyLoanIDColumn,buyLoanOwnerColumn,buyLoanAmountColumn,buyLoanCategoryColumn,buyLoanIntrestColumn,buyLoanYazColumn,buyLoanPaymentRateColumn,buyLoanStatusColumn,buyLoanLenderNameColumn,buyLoanLenderAmountColumn);
+        bindLoansGeneral(sellLoanIDColumn,sellLoanOwnerColumn,sellLoanAmountColumn,sellLoanCategoryColumn,sellLoanInterestColumn, sellLoanYazColumn,sellLoanPaymentRateColumn,sellLoanStatusColumn,sellLoanLendersNameColumn,sellLoanLendersAmountColumn);
         bindLoansPending(loanerAmountRaisedColumn, loanerAmountLeftToActive);
         bindLoansPending(lenderAmountRaisedColumn, lenderAmountLeftToActive);
         bindLoansPending(filteredAmountRaised, filteredAmountLeftToActive);
@@ -275,6 +320,10 @@ public class CustomerController  {
         bindLoansActiveRisk(lenderStartingYazColumn, lenderNextPaymentYazColumn, lenderPaymentYazColumn, lenderPaymentAmountColumn, lenderPaymentInterestColumn, lenderPaymentTotalColumn,
                 lenderTotalPaidAmount, lenderTotalPaidInterest, lenderTotalAmountLeftToPay, lenderTotalInterestLeftToPay, lenderDelayedPaymentsNumber, lenderDelayedPaymentsSum);
         bindLoansActiveRisk(payLoanStartingYazColumn, payLoanNextPaymentYazColumn, payLoansPaymentYazColumn, payLoansPaymentAmountColumn, payLoansPaymentInterestColumn, payLoansPaymentTotalColumn, payLoanTotalPaidAmount, payLoanTotalPaidInterest, payLoanTotalAmountLeftToPay, payLoanTotalInterestLeftToPay, payLoanDelayedPaymentsNumber, payLoanDelayedPaymentsSum);
+        bindLoansActiveRisk(buyLoanStartingYazColumn,buyLoanNextPaymentYazColumn,buyLoanPaymentYazColumn,buyLoanPaymentAmountColumn,buyLoanPaymentInterestColumn,buyLoanPaymentsTotalColumn,
+                buyLoanTotalPaidAmountColumn,buyLoanTotalPaidInterestColumn,buyLoanTotalAmountLeftToPayColumn,buyLoanTotalInterestLeftToPayColumn,null,null);
+        bindLoansActiveRisk(sellLoanStartingYazColumn,sellLoanNextPaymentColumn,sellLoanPaymentYazColumn,sellLoanPaymentAmountColumn,sellLoanPaymentInterestColumn,sellLoanPaymentTotalColumn,
+                sellLoanTotalPaidAmountColumn,sellLoanTotalPaidInterestColumn,sellLoanTotalAmountLeftToPayColumn,sellLoanTotalInterestLeftToPayColumn,null,null);
         bindLoansFinished(lenderFinishedYaz);
         bindLoansFinished(loanerFinishedYaz);
         transactionYazColumn.setCellValueFactory(new PropertyValueFactory<>("yaz"));
@@ -405,16 +454,59 @@ public class CustomerController  {
 
     @FXML
     void NewLoanBtn(ActionEvent event) {
+        String id=NewLoanNameTF.getText();
         int amount= filterAmount(AmountNewLoanTF,AmountNewLoanErrorLabel);
         String category= NewLoanCategoryCB.getSelectionModel().getSelectedItem();
         if(category.equals("New Category"))
             category=NewCategoryTF.getText();
         int interest= filterMaximumOwnership(InterestNewLoanTF, InterestLoanErrorLabel);
-        int Totalyaz= filterField(TotalYazNewLoanTF, TotalYazLoanErrorLabel);
+        int totalYaz= filterField(TotalYazNewLoanTF, TotalYazLoanErrorLabel);
         int payEveryYaz= filterField(PayEveryYazNewLoanTF, PayEveryYazLoanErrorLabel);
-        if(amount ==INVALID || interest==INVALID || Totalyaz== INVALID || payEveryYaz==INVALID){
+        if(amount ==INVALID || interest==INVALID || totalYaz== INVALID || payEveryYaz==INVALID){
             return;
         }
+        LoanDTO loan=new LoanDTO(id, category, amount, totalYaz,payEveryYaz, interest);
+        RequestBody body=RequestBody.create(MediaType.parse("application/json"), GSON_INSTANCE.toJson(loan));
+        Request request = new Request.Builder()
+                .url(NEW_LOAN_PAGE)
+                .post(body)
+                .build();
+        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Platform.runLater(() ->
+                        notification("Error", "Something went wrong: " + e.getMessage())
+                );
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                if (response.code() != 200) {
+                    Platform.runLater(() ->
+                            notification("Invalid File", responseBody)
+                    );
+                }
+                else {
+                    Platform.runLater(() -> {
+                        CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        updateCustomer(loggedIn);
+                    });
+                }
+            }
+        });
+
+
+    }
+
+    @FXML
+    void BuyLoanAction(ActionEvent event) {
+
+    }
+
+    @FXML
+    void SellLoanAction(ActionEvent event) {
+
     }
 
     private void bindLoansActiveRisk(TableColumn<LoanDTO, Integer> loanStartingYazColumn, TableColumn<LoanDTO,Integer> loanNextPaymentYazColumn,
@@ -535,18 +627,22 @@ public class CustomerController  {
             else
                 return null;
         });
-        loanDelayedPaymentsNumber.setCellValueFactory(param -> {
-            if(param.getValue().getStatus().equals("risk"))
-                return new SimpleIntegerProperty(param.getValue().getDelayedPayments().getKey()).asObject();
-            else
-                return null;
-        });
-        loanDelayedPaymentsSum.setCellValueFactory(param -> {
-            if(param.getValue().getStatus().equals("risk"))
-                return new SimpleStringProperty(param.getValue().getDelayedPaymentsAmountString());
-            else
-                return null;
-        });
+        if(loanDelayedPaymentsNumber!=null) {
+            loanDelayedPaymentsNumber.setCellValueFactory(param -> {
+                if (param.getValue().getStatus().equals("risk"))
+                    return new SimpleIntegerProperty(param.getValue().getDelayedPayments().getKey()).asObject();
+                else
+                    return null;
+            });
+        }
+        if(loanDelayedPaymentsSum!=null) {
+            loanDelayedPaymentsSum.setCellValueFactory(param -> {
+                if (param.getValue().getStatus().equals("risk"))
+                    return new SimpleStringProperty(param.getValue().getDelayedPaymentsAmountString());
+                else
+                    return null;
+            });
+        }
     }
     private void bindLoansFinished(TableColumn<LoanDTO, Integer> loanFinishedYaz){
         loanFinishedYaz.setCellValueFactory(param -> {
@@ -563,7 +659,7 @@ public class CustomerController  {
         fileChooser.setTitle("Choose an xml file");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("xml files", "*.xml"));
         File selectedFile = fileChooser.showOpenDialog(primaryStage);
-        if(selectedFile == null) {
+        if (selectedFile == null) {
             return;
         }
 
@@ -577,21 +673,33 @@ public class CustomerController  {
                 .url(UPLOAD_FILE_PAGE)
                 .post(body)
                 .build();
-        Response response=HttpClientUtil.runSync(request);
-        String responseBody = response.body().string();
-        if (response.code() != 200) {
-            Platform.runLater(() ->
-                    notification("Invalid File", responseBody)
-            );
-        } else {
-            Platform.runLater(() -> {
-                CustomerDTO loggedIn=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                updateCustomer(loggedIn);
-            });
-        }
+        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Platform.runLater(() ->
+                        notification("Error", "Something went wrong: " + e.getMessage())
+                );
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                if (response.code() != 200) {
+                    Platform.runLater(() ->
+                            notification("Invalid File", responseBody)
+                    );
+                } else {
+                    Platform.runLater(() -> {
+                        CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        updateCustomer(loggedIn);
+                    });
+                }
+            }
+        });
 
 //        try {
-//            engine.loadFile(selectedFile);
+//            engine.loadFileOld(selectedFile);
 //            String absolutePath=selectedFile.getAbsolutePath();
 //            mainController.getSelectedFileProperty().set(absolutePath);
 //            isFileSelected.set(true);
@@ -602,17 +710,17 @@ public class CustomerController  {
 //            customerTable.setItems(customerList);
 //            loanTable.setItems(loansList);
 //            mainController.updateSystem(customers);
-//            xmlMessage("Success!", "File loaded successfully!");
+//            notification("Success!", "File loaded successfully!");
 //        }
 //        catch(NameException e ) {
-//            xmlMessage("InvalidFile", "There are 2 different instances of the " + e.getType() + " " + e.getName());
+//            notification("InvalidFile", "There are 2 different instances of the " + e.getType() + " " + e.getName());
 //        }
 //        catch (LoanFieldDoesNotExist e) {
-//            xmlMessage("InvalidFile", "The loan " + e.getLoanID() + " contains the " + e.getFieldType() + " " + e.getName() +
+//            notification("InvalidFile", "The loan " + e.getLoanID() + " contains the " + e.getFieldType() + " " + e.getName() +
 //                    ", but the " + e.getFieldType() + " " + e.getName() + " doesn't exist.");
 //        }
 //        catch (YazException e) {
-//            xmlMessage("InvalidFile", "For the loan: " + e.getLoanID() + ", the total loan time (" + e.getTotalYaz() +
+//            notification("InvalidFile", "For the loan: " + e.getLoanID() + ", the total loan time (" + e.getTotalYaz() +
 //                    ") isn't divided by the payment rate (" + e.getPaymentRate() + ")");
 //        }
 
@@ -719,21 +827,34 @@ public class CustomerController  {
                         .url(Constants.CHARGE_PAGE)
                         .method("PUT", body)
                         .addHeader("amount", input).build();
-                try {
-                    Response response=HttpClientUtil.runSync(request);
-                    String responseBody=response.body().string();
-                    if(response.code()==200) {
-                        notification("Charging Succeeded!", integer + " were charged into your account.");
-                        customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                        updateCustomer(customer);
-                        chargeTextField.clear();
-                        mainController.updateCustomersAdmin();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+                    HttpClientUtil.runAsync(request,new okhttp3.Callback() {
 
+                        @Override
+                        public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                            Platform.runLater(() ->
+                                    notification("Error", "Something went wrong: " + e.getMessage())
+                            );
+                        }
+
+                        @Override
+                        public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                            String responseBody = response.body().string();
+                            if (response.code() != 200) {
+                                Platform.runLater(() ->
+                                        notification("Invalid File", responseBody)
+                                );
+                            } else {
+                                Platform.runLater(() -> {
+                                    notification("Charging Succeeded!", integer + " were charged into your account.");
+                                    customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                                    updateCustomer(customer);
+                                    chargeTextField.clear();
+                                    mainController.updateCustomersAdmin();
+                                });
+                            }
+                        }
+                    });
+            }
         }
         catch (NumberFormatException e){
             notification("Invalid Input", input+  " is not an integer");
@@ -757,19 +878,33 @@ public class CustomerController  {
                         .url(Constants.WITHDRAW_PAGE)
                         .method("PUT", body)
                         .addHeader("amount", input).build();
-                try {
-                    Response response=HttpClientUtil.runSync(request);
-                    String responseBody=response.body().string();
-                    if(response.code()==200) {
-                        notification("Withdrawing Succeeded!", integer + " were withdrawn from your account.");
-                        customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                        updateCustomer(customer);
-                        withdrawTextField.clear();
-                        mainController.updateCustomersAdmin();
+
+                HttpClientUtil.runAsync(request,new okhttp3.Callback() {
+
+                    @Override
+                    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                        Platform.runLater(() ->
+                                notification("Error", "Something went wrong: " + e.getMessage())
+                        );
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+
+                    @Override
+                    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                        String responseBody = response.body().string();
+                        if (response.code() != 200) {
+                            Platform.runLater(() ->
+                                    notification("Error", responseBody)
+                            );
+                        } else {
+                            Platform.runLater(() -> {
+                                notification("Withdrawing Succeeded!", integer + " were withdrawn from your account.");                                customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                                updateCustomer(customer);
+                                withdrawTextField.clear();
+                                mainController.updateCustomersAdmin();
+                            });
+                        }
+                    }
+                });
             }
         }
         catch (NumberFormatException e){
