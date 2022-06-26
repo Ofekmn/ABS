@@ -1,16 +1,18 @@
-package ui.customer;
+package customer;
 
 import com.google.gson.reflect.TypeToken;
+import dto.FilterDTO;
 import dto.customerDTO.CustomerDTO;
 import dto.customerDTO.NotificationDTO;
 import dto.customerDTO.TransactionDTO;
-import dto.FilterDTO;
 import dto.loanDTO.LoanDTO;
 import engine.Engine;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringExpression;
-import javafx.beans.property.*;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -25,22 +27,24 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import javafx.util.Pair;
+import login.LoginController;
 import okhttp3.*;
 import org.controlsfx.control.CheckComboBox;
 import org.controlsfx.control.Notifications;
 import org.jetbrains.annotations.NotNull;
-import ui.MainController;
-import ui.util.Constants;
-import ui.util.HttpClientUtil;
-
+import util.Constants;
+import util.HttpClientUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import static ui.util.Constants.*;
+import static util.Constants.*;
 
 
 public class CustomerController  {
@@ -259,11 +263,13 @@ public class CustomerController  {
     @FXML Button closeLoanButton;
     @FXML Label paymentInvalidInput;
     @FXML Label paymentNotEnoughMoneyLabel;
-
+    @FXML Label selectedFileName;
+    @FXML Label yazLabel;
+    @FXML private Label NameLabel;
 
     private ScrollPane scrollPane;
     private Engine engine;
-    private MainController mainController;
+    private LoginController loginController;
     private CustomerDTO customer;
     private int currentYaz;
     private Stage primaryStage;
@@ -276,6 +282,7 @@ public class CustomerController  {
     private ObservableList<TransactionDTO> transactionObservableList;
     private ObservableList<NotificationDTO> notificationObservableList;
     private SimpleBooleanProperty isFiltered;
+    private SimpleStringProperty selectedFileProperty;
 
     private List<String> categories;
     int investedAmount;
@@ -296,6 +303,9 @@ public class CustomerController  {
     private void initialize(){
         NewLoanCategoryCB.getItems().add("New Category");
         NewCategoryTF.visibleProperty().bind(NewLoanCategoryCB.valueProperty().isEqualTo("New Category"));
+        selectedFileProperty = new SimpleStringProperty();
+        selectedFileName.textProperty().bind(selectedFileProperty);
+        yazLabel.textProperty().bind(Bindings.concat("Current Yaz: " + currentYaz));
         loanerTable.setPlaceholder(new Label("You don't borrow from any loan."));
         lenderTable.setPlaceholder(new Label("You don't lend to any loan"));
         filteredLoansTable.setPlaceholder(new Label("There are no loans that match your criteria."));
@@ -662,7 +672,7 @@ public class CustomerController  {
         if (selectedFile == null) {
             return;
         }
-
+        String absolutePath=selectedFile.getAbsolutePath();
         RequestBody body =
                 new MultipartBody.Builder()
                         .addFormDataPart("file1", selectedFile.getName(), RequestBody.create(selectedFile, MediaType.parse("text/xml")))
@@ -692,7 +702,9 @@ public class CustomerController  {
                 } else {
                     Platform.runLater(() -> {
                         CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        selectedFileProperty.set(absolutePath);
                         updateCustomer(loggedIn);
+                        notification("Success!", "File loaded successfully!");
                     });
                 }
             }
@@ -748,12 +760,12 @@ public class CustomerController  {
         categoriesCheckComboBox.getItems().setAll(categories);
     }
 
-    public MainController getMainController() {
-        return mainController;
-    }
+//    public LoginController getMainController() {
+//        return mainController;
+//    }
 
-    public void setMainController(MainController mainController) {
-        this.mainController = mainController;
+    public void setLoginController(LoginController mainController) {
+        this.loginController = mainController;
     }
 
     public CustomerDTO getCustomer() {
@@ -762,6 +774,7 @@ public class CustomerController  {
 
     public void updateCustomer(CustomerDTO customer) {
         this.customer = customer;
+        NameLabel.setText("View By: "+customer.getName());
         loanerList=customer.getOwnerDTO();
         loanerObservableList =FXCollections.observableArrayList(loanerList);
         loanerTable.setItems(loanerObservableList);
@@ -824,9 +837,9 @@ public class CustomerController  {
                 MediaType mediaType = MediaType.parse("text/plain");
                 RequestBody body = RequestBody.create(mediaType, "");
                 Request request = new Request.Builder()
-                        .url(Constants.CHARGE_PAGE)
+                        .url(Constants.CHARGE_PAGE + "?amount="+integer)
                         .method("PUT", body)
-                        .addHeader("amount", input).build();
+                        .build();
                     HttpClientUtil.runAsync(request,new okhttp3.Callback() {
 
                         @Override
@@ -849,7 +862,7 @@ public class CustomerController  {
                                     customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
                                     updateCustomer(customer);
                                     chargeTextField.clear();
-                                    mainController.updateCustomersAdmin();
+                                    //mainController.updateCustomersAdmin();
                                 });
                             }
                         }
@@ -875,9 +888,9 @@ public class CustomerController  {
                 MediaType mediaType = MediaType.parse("text/plain");
                 RequestBody body = RequestBody.create(mediaType, "");
                 Request request = new Request.Builder()
-                        .url(Constants.WITHDRAW_PAGE)
+                        .url(Constants.WITHDRAW_PAGE + "?amount="+integer)
                         .method("PUT", body)
-                        .addHeader("amount", input).build();
+                        .build();
 
                 HttpClientUtil.runAsync(request,new okhttp3.Callback() {
 
@@ -900,7 +913,7 @@ public class CustomerController  {
                                 notification("Withdrawing Succeeded!", integer + " were withdrawn from your account.");                                customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
                                 updateCustomer(customer);
                                 withdrawTextField.clear();
-                                mainController.updateCustomersAdmin();
+                                //mainController.updateCustomersAdmin();
                             });
                         }
                     }
@@ -992,19 +1005,6 @@ public class CustomerController  {
         });
     }
 
-    public void taskToProgress(ScrambleTask filteredNewLoans, Runnable onFinish){
-        scrambleProgressBar.progressProperty().bind(filteredNewLoans.progressProperty());
-        scrambleProgressPercent.textProperty().bind(
-                Bindings.concat(
-                        Bindings.format(
-                                "%.0f",
-                                Bindings.multiply(
-                                        filteredNewLoans.progressProperty(),
-                                        100)),
-                        " %"));
-        filteredNewLoans.valueProperty().addListener((observable, oldValue, newValue) -> taskFinished(Optional.ofNullable(onFinish)));
-    }
-
     public void taskFinished(Optional<Runnable> onFinish) {
         this.scrambleProgressPercent.textProperty().unbind();
         this.scrambleProgressBar.progressProperty().unbind();
@@ -1066,50 +1066,50 @@ public class CustomerController  {
 
     @FXML
     public void scrambleButtonAction() {
-        if(loansCheckComboBox.getCheckModel().isEmpty()){
-            scrambleInvalidLabel.setText("must choose loans");
-            return;
-        }
-
-        Type listType = new TypeToken<List<String>>() {}.getType();
-        RequestBody body=RequestBody.create(MediaType.parse("application/json"), GSON_INSTANCE.toJson(loansCheckComboBox.getCheckModel().getCheckedItems(), listType));
-        Request request = new Request.Builder()
-                .url(SCRAMBLE_PAGE+"?amount="+ investedAmount + "&ownership="+ maximumLoanOwnership)
-                .put(body)
-                .build();
-        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
-            @Override
-            public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                Platform.runLater(() ->
-                        notification("Error", "Something went wrong: " + e.getMessage())
-                );
+            if(loansCheckComboBox.getCheckModel().isEmpty()){
+                scrambleInvalidLabel.setText("must choose loans");
+                return;
             }
 
-            @Override
-            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                String responseBody = response.body().string();
-                if (response.code() != 200) {
+            Type listType = new TypeToken<List<String>>() {}.getType();
+            RequestBody body=RequestBody.create(MediaType.parse("application/json"), GSON_INSTANCE.toJson(loansCheckComboBox.getCheckModel().getCheckedItems(), listType));
+            Request request = new Request.Builder()
+                    .url(SCRAMBLE_PAGE+"?amount="+ investedAmount + "&ownership="+ maximumLoanOwnership)
+                    .put(body)
+                    .build();
+            HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+                @Override
+                public void onFailure(@NotNull Call call, @NotNull IOException e) {
                     Platform.runLater(() ->
-                            notification("Invalid Scramble:", responseBody)
+                            notification("Error", "Something went wrong: " + e.getMessage())
                     );
                 }
-                else {
-                    Platform.runLater(() -> {
-                        Type pairType = new TypeToken<Pair<Double, CustomerDTO>>() {
-                        }.getType();
-                        Pair<Double, CustomerDTO> responsePair=GSON_INSTANCE.fromJson(responseBody, pairType);
-                        double invested=responsePair.getKey();
-                        if(invested<investedAmount)
-                            notification("Scramble succeeded, but...", "only " + String.format("%.1f",invested) + " was invested");
-                        else
-                            notification("Scramble succeeded!", "Successfully invested " + investedAmount + "");
-                        updateCustomer(responsePair.getValue());
-                    });
-                }
-            }
-        });
 
-    }
+                @Override
+                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    if (response.code() != 200) {
+                        Platform.runLater(() ->
+                                notification("Invalid Scramble:", responseBody)
+                        );
+                    }
+                    else {
+                        Platform.runLater(() -> {
+                            Type pairType = new TypeToken<Pair<Double, CustomerDTO>>() {
+                            }.getType();
+                            Pair<Double, CustomerDTO> responsePair=GSON_INSTANCE.fromJson(responseBody, pairType);
+                            double invested=responsePair.getKey();
+                            if(invested<investedAmount)
+                                notification("Scramble succeeded, but...", "only " + String.format("%.1f",invested) + " was invested");
+                            else
+                                notification("Scramble succeeded!", "Successfully invested " + investedAmount + "");
+                            updateCustomer(responsePair.getValue());
+                        });
+                    }
+                }
+            });
+
+        }
 
     private void clearInvalid(){
         amountInvalidLabel.setText("");
@@ -1143,7 +1143,7 @@ public class CustomerController  {
             return;
         }
         engine.closeLoan(paymentLoanComboBox.getSelectionModel().getSelectedItem().getId());
-        mainController.updateAll();
+        //mainController.updateAll();
         notification("Payment succeeded.", "The loan has been closed.");
     }
     @FXML
@@ -1155,7 +1155,7 @@ public class CustomerController  {
             }
             notification("Success!", "Payment had been made.");
             engine.payLoan(paymentLoanComboBox.getSelectionModel().getSelectedItem().getId());
-            mainController.updateAll();
+            //mainController.updateAll();
         }
         else { //status is risk and text isn't empty...
             try {
@@ -1175,7 +1175,7 @@ public class CustomerController  {
                 }
                 engine.payLoanRisk(paymentLoanComboBox.getSelectionModel().getSelectedItem().getId(), amount);
                 notification("Payment succeeded.", "Paid " + paymentLoanTextField.getText());
-                mainController.updateAll();
+                //mainController.updateAll();
             }
             catch(NumberFormatException e) {
                 paymentInvalidInput.setText("That's not a number!");

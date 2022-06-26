@@ -18,7 +18,7 @@ import static abs.constants.Constants.USERNAME;
 public class withdrawServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String amount=req.getHeader("amount");
+        String amount=req.getParameter("amount");
         String name= (String) req.getSession().getAttribute(USERNAME);
         Integer withdraw=Integer.parseInt(amount);
         EngineImpl engineManger= ServletUtils.getEngineManager(getServletContext());
