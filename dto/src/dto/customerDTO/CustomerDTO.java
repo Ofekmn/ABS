@@ -1,22 +1,25 @@
 package dto.customerDTO;
 
 import dto.loanDTO.LoanDTO;
-import javafx.util.Pair;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 public class CustomerDTO {
     private final String name;
-    private final double currentAmount;
-    private final List<TransactionDTO> transactionDTOList;
-    private final List<LoanDTO> ownerDTO;
-    private final List<LoanDTO> lenderDTO;
-    private final List<NotificationDTO> notificationDTOList;
-    private final Map<String, Integer> ownerStatusCount;
-    private final Map<String, Integer> lenderStatusCount;
-    private final String currentAmountString;
+    private double currentAmount;
+    private List<TransactionDTO> transactionDTOList;
+    private List<LoanDTO> ownerDTO;
+    private List<LoanDTO> lenderDTO;
+    private List<NotificationDTO> notificationDTOList;
+    private Map<String, Integer> ownerStatusCount;
+    private Map<String, Integer> lenderStatusCount;
+    private String currentAmountString;
+    private List<LoanDTO> loansToBuy;
+    private List<LoanDTO> loansToSell;
+    private List<String> otherNotifications;
 //    private int ownerNewCount;
 //    private int ownerPendingCount;
 //    private int ownerActiveCount;
@@ -30,18 +33,33 @@ public class CustomerDTO {
 
 
     public CustomerDTO(String name, double currentAmount, List<TransactionDTO> transactionDTOList ,List<LoanDTO> ownerDTOList, List<LoanDTO> lenderDTOList,
-                       List<NotificationDTO> notificationDTOList) {
+                       List<NotificationDTO> notificationDTOList, List<LoanDTO> loansToBuy, List<LoanDTO> loansToSell, List<String> otherNotifications) {
         this.name = name;
         this.currentAmount = currentAmount;
         this.transactionDTOList=transactionDTOList;
         this.ownerDTO = ownerDTOList;
         this.lenderDTO = lenderDTOList;
         this.notificationDTOList=notificationDTOList;
-        this.
         ownerStatusCount=calculateStatusCount(ownerDTOList);
         lenderStatusCount=calculateStatusCount(lenderDTOList);
         currentAmountString=String.format("%.1f", currentAmount);
+        this.loansToBuy = loansToBuy;
+        this.loansToSell=loansToSell;
+        this.otherNotifications=otherNotifications;
+    }
 
+    public CustomerDTO(String name) {
+        this.name = name;
+        transactionDTOList=new LinkedList<>();
+        ownerDTO=new LinkedList<>();
+        lenderDTO=new LinkedList<>();
+        notificationDTOList=new LinkedList<>();
+        ownerStatusCount=new HashMap<>();
+        lenderStatusCount=new HashMap<>();
+        currentAmountString="";
+        loansToBuy=new LinkedList<>();
+        loansToSell=new LinkedList<>();
+        otherNotifications= new LinkedList<>();
     }
 
     public String getName() {
@@ -94,5 +112,15 @@ public class CustomerDTO {
         return statusCount;
     }
 
+    public List<LoanDTO> getLoansToBuy() {
+        return loansToBuy;
+    }
 
+    public List<LoanDTO> getLoansToSell() {
+        return loansToSell;
+    }
+
+    public List<String> getOtherNotifications() {
+        return otherNotifications;
+    }
 }

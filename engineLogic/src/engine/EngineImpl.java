@@ -3,16 +3,15 @@ package engine;
 import dto.customerDTO.CustomerDTO;
 import dto.customerDTO.NotificationDTO;
 import dto.customerDTO.TransactionDTO;
+import dto.database.AdminDatabase;
 import dto.loanDTO.LoanDTO;
 import engine.customer.*;
+import engine.exception.money.NotEnoughMoneyException;
 import engine.exception.xml.LoanFieldDoesNotExist;
 import engine.exception.xml.NameException;
 import engine.exception.xml.YazException;
 import engine.generated.*;
 import engine.loan.*;
-//import engine.old.generated.AbsCustomer;
-//import engine.old.generated.AbsDescriptor;
-//import engine.old.generated.AbsLoan;
 import javafx.util.Pair;
 
 import javax.xml.bind.JAXBContext;
@@ -31,6 +30,10 @@ public class EngineImpl implements Engine, Serializable  {
     private Set<String> possibleCategories;
     private Map<String,Customer> customers;
     private Map<String,Loan> loans;
+    private Set<Loan> loansForSale;
+    private Map<Integer, Pair<AdminDatabase, Map<String, CustomerDTO>>> history;
+    private int rewindYaz;
+    private boolean isRewind;
 
 
     private final static String JAXB_XML_PACKAGE_NAME = "engine.generated";
@@ -41,8 +44,16 @@ public class EngineImpl implements Engine, Serializable  {
         possibleCategories=new HashSet<>();
         customers=new HashMap<>();
         loans=new HashMap<>();
+        loansForSale=new HashSet<>();
+        isRewind=false;
+        history=new HashMap<>();
     }
 
+    public int getRewindStateYaz(){
+        if (isRewind)
+            return rewindYaz;
+        return currentYaz;
+    }
 
     @Override
     public int getCurrentYaz(){return currentYaz;}
@@ -106,63 +117,10 @@ public class EngineImpl implements Engine, Serializable  {
     @Override
     public void loadFileOld(InputStream file) throws NameException, LoanFieldDoesNotExist, YazException {
         return;
-//        try {
-////            InputStream file = new FileInputStream(xmlFile);
-//            AbsDescriptor descriptor = deserializeFrom(file);
-//            Set<String> tempCategories = new HashSet<>();
-//            Set<String> lowerCaseCategories= new HashSet<>();
-//            for (String absCategory:descriptor.getAbsCategories().getAbsCategory()) {
-//                tempCategories.add(absCategory.trim());
-//                lowerCaseCategories.add(absCategory.trim().toLowerCase(Locale.ROOT));
-//            }
-//            Map<String, Customer> tempCustomers = new HashMap<>();
-//            Set<String> lowerCaseCustomers= new HashSet<>();
-//            for (AbsCustomer absCustomer : descriptor.getAbsCustomers().getAbsCustomer()) {
-//                Customer tempCustomer = new Customer(absCustomer.getName().trim(), absCustomer.getAbsBalance());
-//                if (lowerCaseCustomers.contains(tempCustomer.getName().toLowerCase(Locale.ROOT))) {
-//                    throw new NameException("customer", tempCustomer.getName());
-//                }
-//                lowerCaseCustomers.add(absCustomer.getName().trim().toLowerCase(Locale.ROOT));
-//                tempCustomers.put(tempCustomer.getName(), tempCustomer);
-//            }
-//            Map<String,Loan> tempLoans = new HashMap<>();
-//            Set<String> lowerCaseLoans= new HashSet<>();
-//            for (AbsLoan absLoan : descriptor.getAbsLoans().getAbsLoan()) {
-//                Loan tempLoan=new Loan(absLoan.getId().trim(), absLoan.getAbsOwner().trim(),
-//                        absLoan.getAbsCapital(),absLoan.getAbsTotalYazTime(), absLoan.getAbsPaysEveryYaz(),
-//                        absLoan.getAbsIntristPerPayment(), absLoan.getAbsCategory().trim());
-//
-//
-//                if(!lowerCaseCategories.contains(tempLoan.getCategory().toLowerCase(Locale.ROOT))) {
-//                    throw new LoanFieldDoesNotExist(tempLoan.getId() ,"category", tempLoan.getCategory());
-//                }
-//                if(!lowerCaseCustomers.contains(tempLoan.getOwner().toLowerCase(Locale.ROOT))){
-//                    throw new LoanFieldDoesNotExist(tempLoan.getId(), "customer", tempLoan.getOwner());
-//                }
-//                if(tempLoan.getTotalYaz()% tempLoan.getPaysEveryXYaz()!=0){
-//                    throw new YazException(tempLoan.getId(), tempLoan.getTotalYaz(), tempLoan.getPaysEveryXYaz());
-//                }
-//                if(lowerCaseLoans.contains(tempLoan.getId().toLowerCase(Locale.ROOT))) {
-//                    throw new NameException("loan", tempLoan.getId());
-//                }
-//                lowerCaseLoans.add(absLoan.getId().trim().toLowerCase(Locale.ROOT));
-//                tempCustomers.get(tempLoan.getOwner()).getBorrowerLoans().add(tempLoan.getId());
-//                tempLoans.put(tempLoan.getId(),tempLoan);
-//            }
-//            isFileLoaded=true;
-//            currentYaz=1;
-//            possibleCategories=tempCategories;
-//            loans=tempLoans;
-//            customers=tempCustomers;
-//
-//        }
-//        catch(JAXBException e){
-//            e.printStackTrace();
-//        }
     }
 
     private AbsDescriptor deserializeFrom(InputStream in) throws JAXBException {
-        JAXBContext jc= JAXBContext.newInstance("engine.generated");
+            JAXBContext jc= JAXBContext.newInstance("engine.generated");
         //JAXB_XML_PACKAGE_NAME
         Unmarshaller u=jc.createUnmarshaller();
         return (AbsDescriptor) u.unmarshal((in));
@@ -177,17 +135,20 @@ public class EngineImpl implements Engine, Serializable  {
 
     @Override
     public List<LoanDTO> getAllLoans(){
+        if(isRewind)
+            return history.get(rewindYaz).getKey().getLoanList();
         List<LoanDTO> DTOList=new LinkedList<>();
         for (Loan loan: loans.values()) {
             LoanDTO loanDTO=createLoanDTO(loan);
             DTOList.add(loanDTO);
         }
-
         return DTOList;
     }
 
     @Override
     public List<CustomerDTO> getAllCustomersDetails() {
+        if(isRewind)
+            return history.get(rewindYaz).getKey().getCustomerList();
         List <CustomerDTO> customerDTOList=new LinkedList<>();
 
         for (Customer customer :customers.values()){
@@ -197,6 +158,7 @@ public class EngineImpl implements Engine, Serializable  {
         return customerDTOList;
     }
     private LoanDTO createLoanDTO(Loan loan){
+
         return new LoanDTO(loan.getId(), loan.getOwner(), loan.getCategory(),loan.getAmount(), loan.getTotalYaz(),
                 loan.getPaysEveryXYaz(), loan.getInterestPerPayment(), loan.getStatus(), loan.getLenders(), loan.getStartingYaz(),//p
                 loan.nextPaymentYaz(currentYaz), loan.getPayments().stream().map(Payment::getYaz).collect(Collectors.toCollection(ArrayList::new)),
@@ -205,15 +167,32 @@ public class EngineImpl implements Engine, Serializable  {
                 loan.getDelayedPayments(), loan.getFinishYaz(), loan.isPayingPeriod());//r+f
     }
 
+    private LoanDTO createLoanDTO(Loan loan, double sellPrice, double buyPrice){
+
+        return new LoanDTO(loan.getId(), loan.getOwner(), loan.getCategory(),loan.getAmount(), loan.getTotalYaz(),
+                loan.getPaysEveryXYaz(), loan.getInterestPerPayment(), loan.getStatus(), loan.getLenders(), loan.getStartingYaz(),//p
+                loan.nextPaymentYaz(currentYaz), loan.getPayments().stream().map(Payment::getYaz).collect(Collectors.toCollection(ArrayList::new)),
+                loan.getPayments().stream().map(Payment::getAmount).collect(Collectors.toCollection(ArrayList::new)),
+                loan.getPayments().stream().map(Payment::getInterest).collect(Collectors.toCollection(ArrayList::new)),//a
+                loan.getDelayedPayments(), loan.getFinishYaz(), loan.isPayingPeriod(), sellPrice, buyPrice);//r+f
+    }
+
     private CustomerDTO createCustomerDTO(Customer customer) {
+        if(isRewind)
+            return history.get(rewindYaz).getValue().get(customer.getName());
         List <LoanDTO> ownerDTOList=new LinkedList<>();
         for(String string: customer.getBorrowerLoans()){
             Loan loan=loans.get(string);
             ownerDTOList.add(createLoanDTO(loan));
         }
         List <LoanDTO> lenderDTOList=new LinkedList<>();
+        List <LoanDTO> loansToSell=new LinkedList<>();
         for(String string: customer.getLenderLoans()){
-            lenderDTOList.add(createLoanDTO(loans.get(string)));
+            LoanDTO loanDTO=createLoanDTO(loans.get(string), loans.get(string).getSellPrice(customer.getName()), 0);
+            lenderDTOList.add(loanDTO);
+            Loan loan=loans.get(string);
+            if(loan.getStatus().equals("active") && !loan.getSellers().contains(customer.getName()))
+                loansToSell.add(loanDTO);
         }
         List<TransactionDTO> transactionDTOList= new ArrayList<>(customer.getTransactions().size());
         for (Transaction transaction : customer.getTransactions()) {
@@ -223,8 +202,14 @@ public class EngineImpl implements Engine, Serializable  {
         for(CustomerNotification notification : customer.getNotificationList()){
             notificationDTOList.add(createNotificationDTO(notification));
         }
+        List<LoanDTO> loansToBuy=new LinkedList<>();
+        for(Loan loanForSale : loansForSale) {
+            if(!loanForSale.getSellers().contains(customer.getName()) && !loanForSale.getOwner().equals(customer.getName()))
+                //CHECKMARK
+                loansToBuy.add(createLoanDTO(loanForSale, 0, loanForSale.getBuyPrice())); //TODO::REMEMBER THAT CURRENTLY IT DOESN'T CHECK IF HE LENDS FOR THE LOAN ALREADY, AS INTENDED
+        }
         return new CustomerDTO(customer.getName(), customer.getBalance(), transactionDTOList , ownerDTOList, lenderDTOList,
-                notificationDTOList);
+                notificationDTOList, loansToBuy, loansToSell, customer.getOtherNotifications());
     }
 
     private TransactionDTO createTransactionDTO(Transaction transaction){
@@ -269,6 +254,8 @@ public class EngineImpl implements Engine, Serializable  {
     }
 
     public List<String> getCategories() {
+        if(isRewind)
+            return history.get(rewindYaz).getKey().getPossibleCategories();
         return new ArrayList<>(possibleCategories);
     }
 
@@ -331,10 +318,29 @@ public class EngineImpl implements Engine, Serializable  {
     }
 
 
-
+    private void saveHistory() {
+        List<CustomerDTO> historyCustomerList=new LinkedList<>();
+        List<LoanDTO> historyLoanList=new LinkedList<>();
+        Map<String, CustomerDTO> historyCustomerMap=new HashMap<>();
+        Set<LoanDTO> loanToSellList=new HashSet<>();
+        for(String name : customers.keySet()) {
+            CustomerDTO customer=createCustomerDTO(name);
+            historyCustomerMap.put(name, customer);
+            historyCustomerList.add(customer);
+        }
+        for(String id : loans.keySet()) {
+            LoanDTO loan=createLoanDTO(id);
+            historyLoanList.add(loan);
+            if(!loans.get(id).getSellers().isEmpty())
+                loanToSellList.add(loan);
+        }
+        AdminDatabase data=new AdminDatabase(historyCustomerList, historyLoanList,loanToSellList,new LinkedList<>(possibleCategories),currentYaz, true);
+        Pair<AdminDatabase, Map<String, CustomerDTO>> pair=new Pair<>(data, historyCustomerMap);
+        history.put(currentYaz, pair);
+    }
 
     public void advanceTime(){
-
+        saveHistory();
         ++currentYaz;
         for(Customer customer :customers.values()) {
             for(String id: customer.getBorrowerLoans()) {
@@ -343,6 +349,12 @@ public class EngineImpl implements Engine, Serializable  {
                     loan.setYazCount(loan.getYazCount() + 1);
                     if (loan.isPayingPeriod() && loan.getStatus().equals("active")) { //if the loan missed the paying period
                         loan.setStatus("risk");
+                        loansForSale.remove(loan);
+                        for(String sellerName : loan.getSellers()) {
+                            customers.get(sellerName).getOtherNotifications().add("The loan: " + loan.getId() + " became risk" + " at yaz: " + currentYaz);
+                            customers.get(sellerName).getSelling().remove(id);
+                        }
+                        loan.getSellers().clear();
                         missedPayment(loan);
                     }
                     if (loan.getNextYazPayment() == 0 && loan.getStatus().equals("active")) {
@@ -381,10 +393,9 @@ public class EngineImpl implements Engine, Serializable  {
     public void closeLoan(String loanID) {
         Loan loan=loans.get(loanID);
         double amountToPay=loan.getAmount()-loan.getAmountPaid();
-        double interestToPay=loan.totalInterest();
+        double interestToPay=loan.totalInterest() - loan.getInterestPaid();
         outOfRisk(loan, amountToPay, interestToPay);
-        loan.setStatus("finished");
-        loan.setFinishYaz(currentYaz);
+        finishLoan(loan);
         loan.setPayingPeriod(false);
         loan.setDelayedPayments(new Pair<>(0, 0.0));
 
@@ -424,8 +435,7 @@ public class EngineImpl implements Engine, Serializable  {
         BigDecimal totalPaidForPayment= BigDecimal.valueOf(loan.getTotalAmountToPayForPayment());
         totalPaidForPayment=totalPaidForPayment.round(new MathContext(2));
         if(loanAmount.equals(amountPaid)) { // casting for weird floating point cases
-            loan.setStatus("finished");
-            loan.setFinishYaz(currentYaz);
+            finishLoan(loan);
             loan.setPayingPeriod(false);
             loan.setDelayedPayments(new Pair<>(0, 0.0));
         }
@@ -447,6 +457,18 @@ public class EngineImpl implements Engine, Serializable  {
         }
     }
 
+    public void finishLoan(Loan loan) {
+        loan.setStatus("finished");
+        for(String seller : loan.getSellers()){
+            customers.get(seller).getOtherNotifications().add("The loan: " + loan.getId() + " became finished " + "at yaz: " + currentYaz);
+            customers.get(seller).getSelling().remove(loan.getId());
+        }
+        loan.getSellers().clear();
+        loansForSale.remove(loan);
+        loan.setFinishYaz(currentYaz);
+
+    }
+
     public void payLoan(String loanID) {
         Loan loan=loans.get(loanID);
         if(loan.getStatus().equals("active")) {
@@ -465,9 +487,8 @@ public class EngineImpl implements Engine, Serializable  {
             BigDecimal amountPaid= BigDecimal.valueOf(loan.getAmountPaid());
             loanAmount=loanAmount.round(new MathContext(2));
             amountPaid=amountPaid.round(new MathContext(2));
-            if(loanAmount.equals(amountPaid)) { // casting for weird floating point cases
-                loan.setStatus("finished");
-                loan.setFinishYaz(currentYaz);
+            if(loanAmount.equals(amountPaid)) {
+                finishLoan(loan);
             }
             loan.setPayingPeriod(false);
         }
@@ -476,8 +497,7 @@ public class EngineImpl implements Engine, Serializable  {
             double entirePaymentInterest=loan.getTotalAmountToPayForPayment() - entirePaymentAmount;
             outOfRisk(loan, entirePaymentAmount, entirePaymentInterest);
             if((int)loan.getAmount()==(int)loan.getAmountPaid()) { // casting for weird floating point cases
-                loan.setStatus("finished");
-                loan.setFinishYaz(currentYaz);
+                finishLoan(loan);
             }
             else
                 loan.setStatus("active");
@@ -491,53 +511,66 @@ public class EngineImpl implements Engine, Serializable  {
         loan.setDelayedPayments(pair);
         loan.setPayingPeriod(false);
     }
-//        for(Customer customer: customers.values()){
-//            SortedSet <Loan> sortedLoans=new TreeSet<>(Loan::compareTo);
-//            for(String id : customer.getBorrowerLoans())
-//                sortedLoans.add(loans.get(id));
-//            for(Loan loan: sortedLoans){
-//                if(loan.getStatus().equals("active") || loan.getStatus().equals("risk")) {
-//                    loan.setYazCount(loan.getYazCount()+1);
-//                    if(loan.getNextYazPayment()==0) {
-//                        double amount=loan.getAmount() * loan.getPaysEveryXYaz() / loan.getTotalYaz();
-//                        double interest= loan.getAmount() * (loan.getInterestPerPayment()/100) * loan.getPaysEveryXYaz() / loan.getTotalYaz();
-//                        if( (amount + interest) <=customer.getBalance()){
-//                            for(Map.Entry<String, Double> lender : loan.getLenders().entrySet()){
-//                                charge(lender.getKey(), (lender.getValue() + (lender.getValue()*(loan.getInterestPerPayment()/100))) * loan.getPaysEveryXYaz()/ loan.getTotalYaz());
-//                                withdraw(loan.getOwner(), (lender.getValue() + (lender.getValue()*(loan.getInterestPerPayment()/100))) * loan.getPaysEveryXYaz()/ loan.getTotalYaz());
-//                            }
-//                            loan.getPayments().add(new Payment(currentYaz, amount, interest));
-//                            loan.setAmountPaid(loan.getAmountPaid() + amount);
-//                            loan.setInterestPaid(loan.getInterestPaid() + interest);
-//                            if(loan.getStatus().equals("risk")) {
-//                                Pair<Integer, Double> pair=new Pair<>(loan.getDelayedPayments().getKey()-1, loan.getDelayedPayments().getValue() - (amount + interest));
-//                                loan.setDelayedPayments(pair);
-//
-//                                if(loan.getDelayedPayments().getKey()==0)
-//                                    loan.setStatus("active");
-//                            }
-//                                if(loan.getAmountPaid()==loan.getAmount()) {
-//                                    loan.setStatus("finished");
-//                                    loan.setFinishYaz(currentYaz);
-//                                }
-//
-//                        } else{
-//                            loan.setStatus("risk");
-//                            if(!loan.getDelayedPayments().getKey().equals(loan.getTotalYaz()/loan.getPaysEveryXYaz() - loan.getPayments().size())){
-//                                Pair<Integer, Double> pair=new Pair<>(loan.getDelayedPayments().getKey()+1 ,(loan.getDelayedPayments().getValue() + (loan.getAmount()+loan.getAmount()*(loan.getInterestPerPayment()/100))*loan.getPaysEveryXYaz()/ loan.getTotalYaz()));
-//                                loan.setDelayedPayments(pair);
-//                            }
-//
-//                        }
-//                        loan.setYazCount(0);
-//                    }
-//                }
-//            }
-//        }
 
+    public void sellLoan(String loanID, String seller) {
 
+        //add a check that the loan is active...
+        //add a check that the seller does indeed lend to the loan.
+        Loan loan=loans.get(loanID);
+        loan.getSellers().add(seller);
+        Customer customer=customers.get(seller);
+        customer.getSelling().add(loanID);
+        loansForSale.add(loan);
+        customers.get(seller).getOtherNotifications().add("The loan: " + loanID + " is now up for sale at yaz: " + currentYaz);
+    }
+    public void buyLoan(String loanID, String buyer) throws NotEnoughMoneyException {
+        //check that the loan is up for sale
+        //check that buyer isn't a lender nor the owner
+        Customer customer=customers.get(buyer);
+        Loan loan=loans.get(loanID);
+        //check enough money
+        double amountLeftToPay=loan.getAmount() - loan.getAmountPaid();
+        double amountToPay=0;
+
+        for(String sellerID : loan.getSellers()){
+            double sellFor=amountLeftToPay * loan.ownershipPercent(sellerID);
+            amountToPay+=sellFor;
+        }
+        if(customer.getBalance() < amountToPay)
+            throw new NotEnoughMoneyException(customer.getBalance(), amountToPay);
+        for(String sellerID : loan.getSellers()) {
+            double sellFor=amountLeftToPay * loan.ownershipPercent(sellerID);
+            Customer seller=customers.get(sellerID);
+            seller.getSelling().remove(loanID);
+            seller.getLenderLoans().remove(loan.getId());
+            charge(sellerID, sellFor);
+            loan.getLenders().remove(sellerID);
+            customers.get(sellerID).getOtherNotifications().add("The loan: " + loanID + " sold for " + sellFor + " at yaz: " + currentYaz);
+        }
+        double alreadyInvested=0;
+        if(loan.getLenders().containsKey(buyer))
+            alreadyInvested=loan.getLenders().get(buyer);
+        else
+            customer.getLenderLoans().add(loanID);
+        loan.getLenders().put(buyer, amountToPay+alreadyInvested);
+        withdraw(buyer, amountToPay);
+        loan.getSellers().clear();
+        customers.get(buyer).getOtherNotifications().add("The loan: " + loanID + " bought for " + amountToPay + " at yaz: " + currentYaz);
+        loansForSale.remove(loan);
+    }
+
+    public void rewind(int yaz) {
+        rewindYaz=yaz;
+        if(rewindYaz==currentYaz)
+            isRewind=false;
+        else
+            isRewind=true;
+    }
+
+    public boolean isRewind() {
+        return isRewind;
+    }
 }
 
-    //TODO:: Remember to add setPayingPeriod False To Payments
 
 

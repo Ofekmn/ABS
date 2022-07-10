@@ -29,7 +29,6 @@ public class loginServlet extends HttpServlet {
             String usernameFromParameter = request.getParameter(USERNAME);
             if (usernameFromParameter == null || usernameFromParameter.isEmpty()) {
                 //no username in session and no username in parameter - not standard situation. it's a conflict
-
                 // stands for conflict in server state
                 response.setStatus(HttpServletResponse.SC_CONFLICT);
             } else {
@@ -47,7 +46,19 @@ public class loginServlet extends HttpServlet {
                 A better code would be to perform only as little and as necessary things we need here inside the synchronized block and avoid
                 do here other not related actions (such as response setup. this is shown here in that manner just to stress this issue
                  */
+                }
                 synchronized (this) {
+                    if(usernameFromParameter.equals("admin")) {
+                        Object admin = getServletContext().getAttribute("admin");
+                        if (admin == null) {
+                            getServletContext().setAttribute("admin","admin");
+                            response.setStatus(HttpServletResponse.SC_OK);
+                            return;
+                        } else {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            return;
+                        }
+                    }
                     if (engineManager.getCustomersMap().keySet().contains(usernameFromParameter)) {
                         String errorMessage = "Username " + usernameFromParameter + " already exists. Please enter a different username.";
 
@@ -72,7 +83,7 @@ public class loginServlet extends HttpServlet {
                     }
                 }
             }
-        } else {
+         else {
             //user is already logged in
             response.setStatus(HttpServletResponse.SC_OK);
         }

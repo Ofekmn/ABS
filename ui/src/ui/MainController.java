@@ -125,6 +125,8 @@ public class MainController {
         customerController.setScrollPane(scrollPane);
         customerController.setPrimaryStage(primaryStage);
         customerControllerMap.put(customer.getName(), customerController);
+        customerController.start
+        
     }
 
     @FXML

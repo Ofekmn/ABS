@@ -1,6 +1,7 @@
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.GridPane;
@@ -20,10 +21,10 @@ public class customerMain extends Application {
         URL loginPageUrl = getClass().getResource("login/login.fxml");
         FXMLLoader fxmlLoader = new FXMLLoader();
         fxmlLoader.setLocation(loginPageUrl);
-        GridPane loginComponent = fxmlLoader.load();
+        Parent loginComponent = fxmlLoader.load();
         LoginController loginController = fxmlLoader.getController();
         loginController.setPrimaryStage(primaryStage);
-        Scene scene=new Scene(loginComponent,400,350);
+        Scene scene=new Scene(loginComponent,350,305);
         primaryStage.setTitle("A.B.S Customer Window");
         primaryStage.setX(500);
         primaryStage.setScene(scene);

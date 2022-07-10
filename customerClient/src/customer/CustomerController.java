@@ -5,8 +5,8 @@ import dto.FilterDTO;
 import dto.customerDTO.CustomerDTO;
 import dto.customerDTO.NotificationDTO;
 import dto.customerDTO.TransactionDTO;
+import dto.database.CustomerDatabase;
 import dto.loanDTO.LoanDTO;
-import engine.Engine;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.StringExpression;
@@ -34,14 +34,10 @@ import org.controlsfx.control.Notifications;
 import org.jetbrains.annotations.NotNull;
 import util.Constants;
 import util.HttpClientUtil;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static util.Constants.*;
@@ -138,6 +134,7 @@ public class CustomerController  {
     @FXML Label maximumOwnershipInvalidLabel;
     @FXML ProgressBar scrambleProgressBar;
     @FXML Label scrambleProgressPercent;
+    @FXML Button filterButton;
 
     //Scramble:
     @FXML GridPane scrambleGridPane;
@@ -153,8 +150,6 @@ public class CustomerController  {
     @FXML private TextField PayEveryYazNewLoanTF;
     @FXML private TextField InterestNewLoanTF;
     @FXML private TextField TotalYazNewLoanTF;
-    @FXML private Label scrambleProgressPercent1;
-    @FXML private ProgressBar scrambleProgressBar1;
     @FXML private TextField AmountNewLoanTF;
     @FXML private ComboBox<String> NewLoanCategoryCB;
 
@@ -208,6 +203,7 @@ public class CustomerController  {
     @FXML private TableView<LoanDTO> BuyTable;
     @FXML private TableColumn<LoanDTO, String> buyLoanIDColumn;
     @FXML private TableColumn<LoanDTO, String> buyLoanOwnerColumn;
+    @FXML private TableColumn<LoanDTO, String> buyLoanPriceColumn;
     @FXML private TableColumn<LoanDTO, String> buyLoanCategoryColumn;
     @FXML private TableColumn<LoanDTO, Double> buyLoanAmountColumn;
     @FXML private TableColumn<LoanDTO, Double> buyLoanIntrestColumn;
@@ -230,6 +226,7 @@ public class CustomerController  {
     @FXML private TableView<LoanDTO> sellLoansTable;
     @FXML private TableColumn<LoanDTO, String> sellLoanIDColumn;
     @FXML private TableColumn<LoanDTO, String> sellLoanOwnerColumn;
+    @FXML private TableColumn<LoanDTO, String> sellLoanPriceColumn;
     @FXML private TableColumn<LoanDTO, String> sellLoanCategoryColumn;
     @FXML private TableColumn<LoanDTO, Double> sellLoanAmountColumn;
     @FXML private TableColumn<LoanDTO, Double> sellLoanInterestColumn;
@@ -257,6 +254,9 @@ public class CustomerController  {
     @FXML TableColumn<NotificationDTO, String> notificationTotalSumColumn;
 
 
+    @FXML private ListView<String> NotificationListView;
+    @FXML private Label CategoryErrorLabel;
+
     @FXML ComboBox<LoanDTO> paymentLoanComboBox;
     @FXML TextField paymentLoanTextField;
     @FXML Button payButton;
@@ -264,11 +264,21 @@ public class CustomerController  {
     @FXML Label paymentInvalidInput;
     @FXML Label paymentNotEnoughMoneyLabel;
     @FXML Label selectedFileName;
-    @FXML Label yazLabel;
+    @FXML private Label yazLabel;
     @FXML private Label NameLabel;
 
+    @FXML private Button loadFileButton;
+    @FXML private Button buyButton;
+    @FXML private Button sellButton;
+    @FXML private Button newLoanButton;
+    @FXML private Button chargeButton;
+    @FXML private Button withdrawButton;
+    @FXML private Label ReadOnlyLabel;
+
+
     private ScrollPane scrollPane;
-    private Engine engine;
+    private Timer timer;
+    private TimerTask customerRefresher;
     private LoginController loginController;
     private CustomerDTO customer;
     private int currentYaz;
@@ -291,9 +301,13 @@ public class CustomerController  {
     private ObservableList<LoanDTO> filteredLoansObservableList;
 
     private List<LoanDTO> loansToPayFor;
-    private ObservableList loansToPayForObservableList;
+    private ObservableList<LoanDTO> loansToPayForObservableList;
 
+    private List<LoanDTO> loansToSellList;
+    private ObservableList<LoanDTO> loansToSellObservableList;
 
+    private List<LoanDTO> loansToBuyList;
+    private ObservableList<LoanDTO> loansToBuyObservableList;
 
     public CustomerController()  {
         isFiltered=new SimpleBooleanProperty(false);
@@ -301,6 +315,7 @@ public class CustomerController  {
 
     @FXML
     private void initialize(){
+        currentYaz=0;
         NewLoanCategoryCB.getItems().add("New Category");
         NewCategoryTF.visibleProperty().bind(NewLoanCategoryCB.valueProperty().isEqualTo("New Category"));
         selectedFileProperty = new SimpleStringProperty();
@@ -335,6 +350,8 @@ public class CustomerController  {
                 sellLoanTotalPaidAmountColumn,sellLoanTotalPaidInterestColumn,sellLoanTotalAmountLeftToPayColumn,sellLoanTotalInterestLeftToPayColumn,null,null);
         bindLoansFinished(lenderFinishedYaz);
         bindLoansFinished(loanerFinishedYaz);
+        buyLoanPriceColumn.setCellValueFactory(new PropertyValueFactory<>("buyPriceString"));
+        sellLoanPriceColumn.setCellValueFactory(new PropertyValueFactory<>("sellPriceString"));
         transactionYazColumn.setCellValueFactory(new PropertyValueFactory<>("yaz"));
         transactionAmountColumn.setCellValueFactory(new PropertyValueFactory<>("amountWithSign"));
         transactionBeforeColumn.setCellValueFactory(new PropertyValueFactory<>("balanceBeforeString"));
@@ -391,7 +408,7 @@ public class CustomerController  {
         paymentLoanComboBox.setCellFactory(loanDTOToPayComboBoxFactory);
 //        paymentLoanTextField.disableProperty().bind(paymentLoanComboBox.getSelectionModel().getSelectedItem().getStatus().equals("D"));
 //        payButton.disableProperty().bind(paymentLoanComboBox.valueProperty().isNull());
-        closeLoanButton.disableProperty().bind(paymentLoanComboBox.valueProperty().isNull());
+//        closeLoanButton.disableProperty().bind(paymentLoanComboBox.valueProperty().isNull());
     }
 
     private void bindLoansGeneral(TableColumn<LoanDTO, String> idColumn, TableColumn<LoanDTO, String> ownerColumn, TableColumn<LoanDTO, Double> amountColumn, TableColumn<LoanDTO, String> categoryColumn, TableColumn<LoanDTO, Double> interestColumn, TableColumn<LoanDTO, Integer> totalYazColumn, TableColumn<LoanDTO, Integer> paymentRateColumn,
@@ -463,9 +480,13 @@ public class CustomerController  {
 
     @FXML
     void NewLoanBtn(ActionEvent event) {
+        clearNewLoanInvalid();
+        if(!MandatoryCheck(AmountNewLoanTF.getText(),AmountNewLoanErrorLabel)|| !MandatoryCheck(InterestNewLoanTF.getText(),InterestLoanErrorLabel)||
+        !MandatoryCheck(TotalYazNewLoanTF.getText(),TotalYazLoanErrorLabel)|| !MandatoryCheck(PayEveryYazNewLoanTF.getText(),PayEveryYazLoanErrorLabel))
+            return;
         String id=NewLoanNameTF.getText();
         int amount= filterAmount(AmountNewLoanTF,AmountNewLoanErrorLabel);
-        String category= NewLoanCategoryCB.getSelectionModel().getSelectedItem();
+        String category= NewLoanCategoryCB.getValue();
         if(category.equals("New Category"))
             category=NewCategoryTF.getText();
         int interest= filterMaximumOwnership(InterestNewLoanTF, InterestLoanErrorLabel);
@@ -498,25 +519,89 @@ public class CustomerController  {
                 }
                 else {
                     Platform.runLater(() -> {
-                        CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                        updateCustomer(loggedIn);//TODO::ADD RESETS TO THE NEW LOAN VIEW
+                        //CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                       //updateCustomerAndResetFields(loggedIn);
+                        ResetNewLoanFields();
                         notification("Success!", "New loan created");
                     });
                 }
             }
         });
-
-
     }
 
     @FXML
-    void BuyLoanAction(ActionEvent event) {
+    void BuyLoanAction() {
+        LoanDTO loan=BuyTable.getSelectionModel().getSelectedItem();
+        if(loan==null)
+            notification("Invalid", "No loan selected!");
+        else {
+            Request request = new Request.Builder()
+                    .url(BUY_LOAN_PAGE + "?ID=" + loan.getId())
+                    .get()
+                    .build();
+            HttpClientUtil.runAsync(request,new okhttp3.Callback() {
 
+                @Override
+                public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                    Platform.runLater(() ->
+                            notification("Error", "Something went wrong: " + e.getMessage())
+                    );
+                }
+
+                @Override
+                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    if (response.code() != 200) {
+                        Platform.runLater(() ->
+                                notification("Error", responseBody)
+                        );
+                    } else {
+                        Platform.runLater(() -> {
+                            //customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                            //updateCustomerAndResetFields(customer);
+                        });
+                    }
+                }
+            });
+        }
     }
 
     @FXML
-    void SellLoanAction(ActionEvent event) {
+    void SellLoanAction() {
+        LoanDTO loan=sellLoansTable.getSelectionModel().getSelectedItem();
+        if(loan==null)
+            notification("Invalid", "No loan selected!");
+        else {
+            Request request = new Request.Builder()
+                    .url(SELL_LOAN_PAGE + "?ID=" + loan.getId())
+                    .get()
+                    .build();
+            HttpClientUtil.runAsync(request,new okhttp3.Callback() {
 
+                @Override
+                public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                    Platform.runLater(() ->
+                            notification("Error", "Something went wrong: " + e.getMessage())
+                    );
+                }
+
+                @Override
+                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    if (response.code() != 200) {
+                        Platform.runLater(() ->
+                                notification("Invalid Input", responseBody)
+                        );
+                    } else {
+                        Platform.runLater(() -> {
+                            //customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                           // updateCustomerAndResetFields(customer);
+                            notification("Success!", "The loan is up for sale!");
+                        });
+                    }
+                }
+            });
+        }
     }
 
     private void bindLoansActiveRisk(TableColumn<LoanDTO, Integer> loanStartingYazColumn, TableColumn<LoanDTO,Integer> loanNextPaymentYazColumn,
@@ -663,6 +748,42 @@ public class CustomerController  {
         });
     }
 
+    public void startRefresh() {
+        customerRefresher = new CustomerRefresher(
+                this::updateCustomerPull);
+        timer = new Timer();
+        timer.schedule(customerRefresher, REFRESH_RATE, REFRESH_RATE);
+    }
+
+    private void updateCustomerPull(CustomerDatabase customerDatabase) {
+        Platform.runLater(() -> {
+            categories=customerDatabase.getCategories();
+            if(categories.size()>0)
+            categoriesCheckComboBox.getItems().setAll(categories);
+            if(categories.size()>0 && !NewLoanCategoryCB.getItems().equals(FXCollections.observableArrayList(categories))) {
+                NewLoanCategoryCB.getItems().setAll(categories);
+                NewLoanCategoryCB.getItems().add("New Category");
+            }
+            currentYaz=customerDatabase.getYaz();
+            updateCustomer(customerDatabase.getCustomer());
+            disableButtonsRewind(customerDatabase.isRewind());
+        });
+    }
+
+    private void disableButtonsRewind(Boolean isRewind) {
+        buyButton.disableProperty().set(isRewind);
+        sellButton.disableProperty().set(isRewind);
+        newLoanButton.disableProperty().set(isRewind);
+        loadFileButton.disableProperty().set(isRewind);
+        chargeButton.disableProperty().set(isRewind);
+        withdrawButton.disableProperty().set(isRewind);
+        filterButton.disableProperty().set(isRewind);
+        scrambleButton.disableProperty().set(isRewind);
+        payButton.disableProperty().set(isRewind);
+        closeLoanButton.disableProperty().set(isRewind);
+        ReadOnlyLabel.visibleProperty().set(isRewind);
+    }
+
     @FXML
     public void loadFIleButtonAction() throws IOException, CloneNotSupportedException {
         FileChooser fileChooser = new FileChooser();
@@ -701,40 +822,14 @@ public class CustomerController  {
                     );
                 } else {
                     Platform.runLater(() -> {
-                        CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        //CustomerDTO loggedIn = GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
                         selectedFileProperty.set(absolutePath);
-                        updateCustomer(loggedIn);
+                        //updateCustomerAndResetFields(loggedIn);
                         notification("Success!", "File loaded successfully!");
                     });
                 }
             }
         });
-
-//        try {
-//            engine.loadFileOld(selectedFile);
-//            String absolutePath=selectedFile.getAbsolutePath();
-//            mainController.getSelectedFileProperty().set(absolutePath);
-//            isFileSelected.set(true);
-//            customers= engine.getAllCustomersDetails();
-//            loans=engine.getAllLoans();
-//            loansList=FXCollections.observableArrayList(loans);
-//            customerList=FXCollections.observableArrayList(customers);
-//            customerTable.setItems(customerList);
-//            loanTable.setItems(loansList);
-//            mainController.updateSystem(customers);
-//            notification("Success!", "File loaded successfully!");
-//        }
-//        catch(NameException e ) {
-//            notification("InvalidFile", "There are 2 different instances of the " + e.getType() + " " + e.getName());
-//        }
-//        catch (LoanFieldDoesNotExist e) {
-//            notification("InvalidFile", "The loan " + e.getLoanID() + " contains the " + e.getFieldType() + " " + e.getName() +
-//                    ", but the " + e.getFieldType() + " " + e.getName() + " doesn't exist.");
-//        }
-//        catch (YazException e) {
-//            notification("InvalidFile", "For the loan: " + e.getLoanID() + ", the total loan time (" + e.getTotalYaz() +
-//                    ") isn't divided by the payment rate (" + e.getPaymentRate() + ")");
-//        }
 
     }
 
@@ -749,20 +844,6 @@ public class CustomerController  {
     public void setScrollPane(ScrollPane scrollPane) {
         this.scrollPane = scrollPane;
     }
-
-    public Engine getEngine() {
-        return engine;
-    }
-
-    public void setEngine(Engine engine) {
-        this.engine = engine;
-        categories=engine.getCategories();
-        categoriesCheckComboBox.getItems().setAll(categories);
-    }
-
-//    public LoginController getMainController() {
-//        return mainController;
-//    }
 
     public void setLoginController(LoginController mainController) {
         this.loginController = mainController;
@@ -786,23 +867,70 @@ public class CustomerController  {
         transactionList=customer.getTransactionDTOList();
         transactionObservableList=FXCollections.observableArrayList(transactionList);
         transactionTable.setItems(transactionObservableList);
-
+        yazLabel.textProperty().bind(Bindings.concat("Current Yaz: " + currentYaz));
         StringExpression s= Bindings.concat("Balance: ", String.format("%.1f", customer.getCurrentAmount()));
         balanceLabel.textProperty().bind(s);
-        if(filteredLoans!=null) {
-            filteredLoans.clear();
-            filteredLoansObservableList.clear();
+        notificationList=customer.getNotificationDTOList();
+        notificationObservableList=FXCollections.observableArrayList(notificationList);
+        notificationTable.setItems(notificationObservableList);
+
+
+        loansToPayFor=loanerList.stream().
+                filter(loan->loan.getStatus().equals("risk") || (loan.getStatus().equals("active"))).
+                collect(Collectors.toList());
+        loansToPayForObservableList=FXCollections.observableArrayList(loansToPayFor);
+        paymentTable.setItems(loansToPayForObservableList);
+        boolean change=false;
+        List<LoanDTO> cbLoans=paymentLoanComboBox.getItems();
+        for(LoanDTO loan: loansToPayFor){
+            if(!cbLoans.contains(loan)){
+                change=true;
+                break;
+            }
         }
-        amountTextField.setText("");
-        categoriesCheckBox.setSelected(false);
-        minimumInterestCheckBox.setSelected(false);
-        minimumTotalYazCheckBox.setSelected(false);
-        maximumOpenLoansCheckBox.setSelected(false);
-        maximumOwnershipCheckBox.setSelected(false);
-        loansCheckComboBox.getCheckModel().clearChecks();
-        isFiltered.set(false);
-        scrambleProgressBar.setVisible(false);
-        scrambleProgressPercent.setText("");
+        if(loansToPayFor.size()!= paymentLoanComboBox.getItems().size())
+            change=true;
+        String message="";
+        if(change) {
+            paymentLoanComboBox.getSelectionModel().clearSelection();
+            paymentLoanComboBox.getItems().clear();
+            paymentLoanComboBox.getItems().setAll(loansToPayFor);
+        }
+        List<LoanDTO> tempSellList=customer.getLoansToSell();
+        if(!tempSellList.equals(loansToSellList)) {
+            loansToSellList = tempSellList;
+            loansToSellObservableList = FXCollections.observableArrayList(loansToSellList);
+            sellLoansTable.setItems(loansToSellObservableList);
+        }
+        List<LoanDTO> tempBuyList=customer.getLoansToBuy();
+        if(!tempBuyList.equals(loansToBuyList)) {
+            loansToBuyList = tempBuyList;
+            loansToBuyObservableList = FXCollections.observableArrayList(loansToBuyList);
+            BuyTable.setItems(loansToBuyObservableList);
+        }
+        NotificationListView.setItems(FXCollections.observableArrayList(customer.getOtherNotifications()));
+    }
+
+    public void updateCustomerAndResetFields(CustomerDTO customer) {
+        this.customer = customer;
+        NameLabel.setText("View By: "+customer.getName());
+        loanerList=customer.getOwnerDTO();
+        loanerObservableList =FXCollections.observableArrayList(loanerList);
+        loanerTable.setItems(loanerObservableList);
+
+        lenderList=customer.getLenderDTO();
+        lenderObservableList =FXCollections.observableArrayList(lenderList);
+        lenderTable.setItems(lenderObservableList);
+
+        transactionList=customer.getTransactionDTOList();
+        transactionObservableList=FXCollections.observableArrayList(transactionList);
+        transactionTable.setItems(transactionObservableList);
+        yazLabel.textProperty().bind(Bindings.concat("Current Yaz: " + currentYaz));
+        StringExpression s= Bindings.concat("Balance: ", String.format("%.1f", customer.getCurrentAmount()));
+        balanceLabel.textProperty().bind(s);
+
+
+
 
         notificationList=customer.getNotificationDTOList();
         notificationObservableList=FXCollections.observableArrayList(notificationList);
@@ -814,16 +942,24 @@ public class CustomerController  {
         loansToPayForObservableList=FXCollections.observableArrayList(loansToPayFor);
         paymentTable.setItems(loansToPayForObservableList);
         //test.set("");
-        paymentLoanTextField.disableProperty().set(true);
-        payButton.disableProperty().set(true);
-        paymentLoanComboBox.getSelectionModel().clearSelection();
-        paymentLoanComboBox.getItems().clear();
-        paymentLoanComboBox.getItems().setAll(loansToPayFor);
+
 //        paymentLoanTextField.setDisable(true);
 
 
+        loansToSellList=customer.getLoansToSell();
+        loansToSellObservableList=FXCollections.observableArrayList(loansToSellList);
+        sellLoansTable.setItems(loansToSellObservableList);
 
-        clearInvalid();
+        loansToBuyList = customer.getLoansToBuy();
+        loansToBuyObservableList = FXCollections.observableArrayList(loansToBuyList);
+        BuyTable.setItems(loansToBuyObservableList);
+
+        NotificationListView.setItems(FXCollections.observableArrayList(customer.getOtherNotifications()));
+
+        clearFilterInvalid();
+        clearPaymentInvalid();
+        clearNewLoanInvalid();
+
     }
 
     @FXML
@@ -859,10 +995,9 @@ public class CustomerController  {
                             } else {
                                 Platform.runLater(() -> {
                                     notification("Charging Succeeded!", integer + " were charged into your account.");
-                                    customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                                    updateCustomer(customer);
+                                   // customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                                   // updateCustomerAndResetFields(customer);
                                     chargeTextField.clear();
-                                    //mainController.updateCustomersAdmin();
                                 });
                             }
                         }
@@ -911,9 +1046,8 @@ public class CustomerController  {
                         } else {
                             Platform.runLater(() -> {
                                 notification("Withdrawing Succeeded!", integer + " were withdrawn from your account.");                                customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
-                                updateCustomer(customer);
+                                //updateCustomerAndResetFields(customer);
                                 withdrawTextField.clear();
-                                //mainController.updateCustomersAdmin();
                             });
                         }
                     }
@@ -939,7 +1073,7 @@ public class CustomerController  {
     @FXML
     public void filter() {
         //getting values
-        clearInvalid();
+        clearFilterInvalid();
         int amount= filterAmount(amountTextField,amountInvalidLabel);
         if(amount > customer.getCurrentAmount()) {
             amountInvalidLabel.setText("Not enough money in your account.");
@@ -1005,12 +1139,45 @@ public class CustomerController  {
         });
     }
 
-    public void taskFinished(Optional<Runnable> onFinish) {
-        this.scrambleProgressPercent.textProperty().unbind();
-        this.scrambleProgressBar.progressProperty().unbind();
-        onFinish.ifPresent(Runnable::run);
+    private void ResetFilterFields(){
+        if(filteredLoans!=null) {
+            filteredLoans.clear();
+            filteredLoansObservableList.clear();
+        }
+        amountTextField.setText("");
+        categoriesCheckBox.setSelected(false);
+        minimumInterestCheckBox.setSelected(false);
+        minimumTotalYazCheckBox.setSelected(false);
+        maximumOpenLoansCheckBox.setSelected(false);
+        maximumOwnershipCheckBox.setSelected(false);
+        loansCheckComboBox.getCheckModel().clearChecks();
+        isFiltered.set(false);
     }
 
+    private void ResetPaymentFields(){
+        paymentLoanTextField.disableProperty().set(true);
+        payButton.disableProperty().set(true);
+        paymentLoanComboBox.getSelectionModel().clearSelection();
+        paymentLoanComboBox.getItems().clear();
+        paymentLoanComboBox.getItems().setAll(loansToPayFor);
+    }
+
+    private void ResetNewLoanFields(){
+        NewLoanNameTF.setText("");
+        NewCategoryTF.setText("");
+        PayEveryYazNewLoanTF.setText("");
+        InterestNewLoanTF.setText("");
+        AmountNewLoanTF.setText("");
+        TotalYazNewLoanTF.setText("");
+    }
+
+    private boolean MandatoryCheck(String textField, Label invalidLabel){
+        if(textField.isEmpty()) {
+            invalidLabel.setText("This Filed is mandatory!");
+            return false;
+        }
+        return true;
+    }
 
     private int filterAmount(TextField textField, Label invalidLabel){
         try{
@@ -1103,7 +1270,8 @@ public class CustomerController  {
                                 notification("Scramble succeeded, but...", "only " + String.format("%.1f",invested) + " was invested");
                             else
                                 notification("Scramble succeeded!", "Successfully invested " + investedAmount + "");
-                            updateCustomer(responsePair.getValue());
+                            //updateCustomerAndResetFields(responsePair.getValue());
+                            ResetFilterFields();
                         });
                     }
                 }
@@ -1111,16 +1279,28 @@ public class CustomerController  {
 
         }
 
-    private void clearInvalid(){
+    private void clearFilterInvalid(){
         amountInvalidLabel.setText("");
         minimumInterestInvalidLabel.setText("");
         minimumTotalYazInvalidLabel.setText("");
         maximumOpenLoansInvalidLabel.setText("");
         maximumOwnershipInvalidLabel.setText("");
         scrambleInvalidLabel.setText("");
+    }
+
+    private void clearPaymentInvalid(){
         paymentNotEnoughMoneyLabel.setText("");
         paymentInvalidInput.setText("");
         paymentLoanTextField.setText("");
+    }
+
+    private void clearNewLoanInvalid(){
+        AmountNewLoanErrorLabel.setText("");
+        CategoryErrorLabel.setText("");
+        LoanNameErrorLabel.setText("");
+        InterestLoanErrorLabel.setText("");
+        PayEveryYazLoanErrorLabel.setText("");
+        TotalYazLoanErrorLabel.setText("");
     }
 
     @FXML
@@ -1138,24 +1318,98 @@ public class CustomerController  {
 
     @FXML
     public void closeLoanButtonAction() {
+        LoanDTO loan=paymentLoanComboBox.getSelectionModel().getSelectedItem();
+        if(loan==null) {
+            notification("No loan selected", "You must select a loan before paying");
+            return;
+        }
         if(paymentLoanComboBox.getSelectionModel().getSelectedItem().getAmountLeftToPay()>customer.getCurrentAmount()){
             paymentNotEnoughMoneyLabel.setText("Not enough money in your account!");
             return;
         }
-        engine.closeLoan(paymentLoanComboBox.getSelectionModel().getSelectedItem().getId());
-        //mainController.updateAll();
-        notification("Payment succeeded.", "The loan has been closed.");
+        MediaType mediaType = MediaType.parse("application/json");
+        RequestBody body = RequestBody.create(mediaType, GSON_INSTANCE.toJson(loan.getId()));
+        Request request = new Request.Builder()
+                .url(Constants.PAYMENT_PAGE+"?close="+true)
+                .post(body)
+                .build();
+        HttpClientUtil.runAsync(request,new okhttp3.Callback() {
+
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Platform.runLater(() ->
+                        notification("Error", "Something went wrong: " + e.getMessage())
+                );
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                if (response.code() != 200) {
+                    Platform.runLater(() ->
+                            notification("Invalid Input", responseBody)
+                    );
+                } else {
+                    Platform.runLater(() -> {
+                        notification("Payment succeeded.", "The loan has been closed.");
+                        //customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                        //updateCustomerAndResetFields(customer);
+                        chargeTextField.clear();
+                    });
+                }
+            }
+        });
     }
     @FXML
     public void payButtonAction(){
+        clearPaymentInvalid();
+        LoanDTO loan=paymentLoanComboBox.getSelectionModel().getSelectedItem();
+        if(loan==null) {
+            notification("No loan selected", "You must select a loan before paying");
+            return;
+        }
+        if(loan.getStatus().equals("active") && !loan.isPayingPeriod()) {
+            notification("Error:", "This isn't the loan's paying period.");
+            return;
+        }
         if(paymentLoanComboBox.getSelectionModel().getSelectedItem().getStatus().equals("active") || paymentLoanTextField.getText().equals("")){
             if(paymentLoanComboBox.getSelectionModel().getSelectedItem().getExpectedAmount()>customer.getCurrentAmount()){
                 paymentNotEnoughMoneyLabel.setText("Not enough money in your account!");
                 return;
             }
-            notification("Success!", "Payment had been made.");
-            engine.payLoan(paymentLoanComboBox.getSelectionModel().getSelectedItem().getId());
-            //mainController.updateAll();
+            MediaType mediaType = MediaType.parse("application/json");
+            RequestBody body = RequestBody.create(mediaType, GSON_INSTANCE.toJson(loan.getId()));
+            Request request = new Request.Builder()
+                    .url(Constants.PAYMENT_PAGE)
+                    .post(body)
+                    .build();
+            HttpClientUtil.runAsync(request,new okhttp3.Callback() {
+
+                @Override
+                public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                    Platform.runLater(() ->
+                            notification("Error", "Something went wrong: " + e.getMessage())
+                    );
+                }
+
+                @Override
+                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    if (response.code() != 200) {
+                        Platform.runLater(() ->
+                                notification("Invalid Input", responseBody)
+                        );
+                    } else {
+                        Platform.runLater(() -> {
+                            notification("Success!", "Payment had been made.");
+                           // customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                            //updateCustomerAndResetFields(customer);
+                            ResetPaymentFields();
+                            chargeTextField.clear();
+                        });
+                    }
+                }
+            });
         }
         else { //status is risk and text isn't empty...
             try {
@@ -1173,8 +1427,38 @@ public class CustomerController  {
                     paymentInvalidInput.setText("Not enough money.");
                     return;
                 }
-                engine.payLoanRisk(paymentLoanComboBox.getSelectionModel().getSelectedItem().getId(), amount);
-                notification("Payment succeeded.", "Paid " + paymentLoanTextField.getText());
+                MediaType mediaType = MediaType.parse("application/json");
+                RequestBody body = RequestBody.create(mediaType, GSON_INSTANCE.toJson(loan.getId()));
+                Request request = new Request.Builder()
+                        .url(Constants.PAYMENT_PAGE+"?amount="+amount)
+                        .post(body)
+                        .build();
+                HttpClientUtil.runAsync(request,new okhttp3.Callback() {
+
+                    @Override
+                    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                        Platform.runLater(() ->
+                                notification("Error", "Something went wrong: " + e.getMessage())
+                        );
+                    }
+
+                    @Override
+                    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                        String responseBody = response.body().string();
+                        if (response.code() != 200) {
+                            Platform.runLater(() ->
+                                    notification("Invalid Input", responseBody)
+                            );
+                        } else {
+                            Platform.runLater(() -> {
+                                notification("Payment succeeded.", "Paid " + paymentLoanTextField.getText());
+                                //customer=GSON_INSTANCE.fromJson(responseBody, CustomerDTO.class);
+                                //updateCustomerAndResetFields(customer);
+                                chargeTextField.clear();
+                            });
+                        }
+                    }
+                });
                 //mainController.updateAll();
             }
             catch(NumberFormatException e) {

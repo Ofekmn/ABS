@@ -114,12 +114,12 @@ public class LoginController {
         loader.setLocation(url);
         ScrollPane scrollPane = loader.load(url.openStream());
         CustomerController customerController = loader.getController();
-        customerController.updateCustomer(customer);
+        customerController.updateCustomerAndResetFields(customer);
         customerController.setLoginController(this);
-        //customerController.setEngine(engine);
         customerController.setScrollPane(scrollPane);
         customerController.setPrimaryStage(primaryStage);
         customerControllerMap.put(customer.getName(), customerController);
+        customerController.startRefresh();
         return scrollPane;
     }
 

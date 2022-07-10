@@ -32,7 +32,7 @@ public class FilterServlet extends HttpServlet {
         String requestData = req.getReader().lines().collect(Collectors.joining());
         FilterDTO filterDTO = gson.fromJson(requestData, FilterDTO.class);
         List<LoanDTO> filteredLoans;
-        synchronized (this) { //not sure if synchronized is a must...
+        synchronized (this) {
             filteredLoans=engineManger.filteredLoans(name,filterDTO.getCategories(),filterDTO.getInterest(),filterDTO.getYaz(),filterDTO.getMaximumOpenLoans());
         }
         PrintWriter writer = resp.getWriter();

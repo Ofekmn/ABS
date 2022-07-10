@@ -1,13 +1,11 @@
 package admin;
 
+import com.google.gson.reflect.TypeToken;
 import dto.customerDTO.CustomerDTO;
+import dto.database.AdminDatabase;
 import dto.loanDTO.LoanDTO;
-import engine.Engine;
-import engine.exception.xml.LoanFieldDoesNotExist;
-import engine.exception.xml.NameException;
-import engine.exception.xml.YazException;
-import engine.loan.Loan;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
@@ -20,13 +18,19 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.util.Pair;
+import okhttp3.*;
+import org.controlsfx.control.Notifications;
+import org.jetbrains.annotations.NotNull;
+import util.HttpClientUtil;
 
-import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.*;
+
+import static util.Constants.*;
 
 public class AdminController  {
 
@@ -48,7 +52,7 @@ public class AdminController  {
     @FXML TableColumn<LoanDTO, Double> loanAmountColumn;
     @FXML TableColumn<LoanDTO, Double> loanInterestColumn;
     @FXML TableColumn<LoanDTO, Integer> loanYazColumn;
-    @FXML TableColumn<Loan, Integer> loanPaymentRateColumn;
+    @FXML TableColumn<LoanDTO, Integer> loanPaymentRateColumn;
     @FXML TableColumn<LoanDTO, String> loanStatusColumn;
     @FXML TableColumn<LoanDTO, List<String>> loanLendersNameColumn;
     @FXML TableColumn<LoanDTO, List<Double>> loanLendersAmountColumn;
@@ -69,36 +73,44 @@ public class AdminController  {
     @FXML TableColumn<LoanDTO, Integer> loanFinishedYaz;
 
     @FXML private Label yazLabel;
+    @FXML private Label AdminNameLabel;
 
     private Stage primaryStage;
-    private Engine engine;
     //private MainController mainController;
-    private int currentyaz;
+    private int currentYaz;
+    private SimpleIntegerProperty observableYaz=new SimpleIntegerProperty();
     private List<CustomerDTO> customers;
     private List<LoanDTO> loans;
     private ScrollPane root;
     ObservableList<CustomerDTO> customerList;
     ObservableList<LoanDTO> loansList;
+    private TimerTask adminRefresher;
+    private Timer timer;
+
+    @FXML private Label ReadOnlyLabel;
     @FXML private Slider RewindSlider;
     @FXML private Label SliderValue;
-
-
+    private boolean isRewind;
 
     @FXML
     private void initialize() {
-        currentyaz=5;
-
-        ObservableValue<Integer> yaz = new SimpleIntegerProperty(currentyaz).asObject();
-        RewindSlider.maxProperty().bind(yaz);
+        currentYaz = 1;
+        observableYaz.set(currentYaz);
+        customerList=FXCollections.observableArrayList(new ArrayList<>());
+        loansList=FXCollections.observableArrayList(new ArrayList<>());
+        RewindSlider.maxProperty().bind(observableYaz.asObject());
         RewindSlider.setMajorTickUnit(1);
         RewindSlider.valueProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 SliderValue.setText(Integer.toString(newValue.intValue()));
+
             }
         });
-        //loanTable.setItems(FXCollections.observableArrayList(loans));
-       // customerTable.setItems(FXCollections.observableArrayList(customers));
+        RewindSlider.valueProperty().setValue(observableYaz.getValue());
+        yazLabel.textProperty().bind(Bindings.concat("Current Yaz: " + currentYaz));
+        loanTable.setItems(loansList);
+       customerTable.setItems(customerList);
 
         //customer binding
         customerNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -363,38 +375,114 @@ public class AdminController  {
         this.root = root;
     }
 
-    public Engine getEngine() {
-        return engine;
-    }
-
-    public void setEngine(Engine engine) {
-        this.engine = engine;
-    }
-
     public List<CustomerDTO> getCustomers() {
         return customers;
     }
 
     @FXML
     private void increaseYazButtonAction() {
-        engine.advanceTime();
-        //mainController.updateAll();
+        MediaType mediaType = MediaType.parse("text/plain");
+        RequestBody body = RequestBody.create(mediaType, "");
+        Request request = new Request.Builder()
+                .url(INCREASE_YAZ_PAGE)
+                .post(body)
+                .build();
+        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                Platform.runLater(() -> {
+                    AdminDatabase data = GSON_INSTANCE.fromJson(responseBody, AdminDatabase.class);
+                    customers=data.getCustomerList();
+                    loans=data.getLoanList();
+                    currentYaz =data.getYaz();
+                    observableYaz.set(currentYaz);
+                    RewindSlider.valueProperty().setValue(observableYaz.getValue());
+                    isRewind = data.isRewind();
+                    updateAll();
+                });
+            }
+        });
     }
 
     public void updateCustomers() {
-        customers= engine.getAllCustomersDetails();
         customerList.clear();
         customerList.addAll(customers);
     }
 
     public void updateAll() {
+        yazLabel.textProperty().bind(Bindings.concat("Current Yaz: " + currentYaz));
         updateCustomers();
         updateLoans();
     }
 
     public void updateLoans() {
-        loans=engine.getAllLoans();
         loansList.clear();
         loansList.addAll(loans);
+    }
+
+    public void startRefresh() {
+        adminRefresher = new AdminRefresher(
+                this::updateSystemPull);
+        timer = new Timer();
+        timer.schedule(adminRefresher, REFRESH_RATE, REFRESH_RATE);
+    }
+
+    public void updateSystemPull(Pair<List<CustomerDTO>, List<LoanDTO>> system) {
+        Platform.runLater(() -> {
+            customers=system.getKey();
+            loans=system.getValue();
+            updateAll();
+        });
+    }
+    @FXML
+    public void rewindSliderMouseRelease() {
+        int yaz=(int)RewindSlider.getValue();
+        RequestBody body=RequestBody.create(MediaType.parse("application/json"), GSON_INSTANCE.toJson(yaz));
+        Request request = new Request.Builder()
+                .url(REWIND_PAGE)
+                .post(body)
+                .build();
+        HttpClientUtil.runAsync(request, new okhttp3.Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                notification("Error:", "Something went wrong: " + e.getMessage());
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                Platform.runLater(() -> {
+                    AdminDatabase data = GSON_INSTANCE.fromJson(responseBody, AdminDatabase.class);
+                    customers = data.getCustomerList();
+                    loans = data.getLoanList();
+                    currentYaz = data.getYaz();
+                    isRewind = data.isRewind();
+                    //observableYaz.set(currentYaz);
+                    updateAll();
+                    increaseYazButton.disableProperty().set(isRewind);
+                    ReadOnlyLabel.visibleProperty().set(isRewind);
+                });
+            }
+        });
+
+    }
+
+    public void setAdminNameLabel(String adminNameLabel) {
+        AdminNameLabel.setText("View By: "+adminNameLabel);
+    }
+
+    private void notification(String title, String message) {
+        Notifications.create()
+                .title(title)
+                .text(message)
+                .hideAfter(Duration.seconds(5))
+                .position(Pos.CENTER)
+                .showWarning();
     }
 }

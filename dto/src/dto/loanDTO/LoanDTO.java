@@ -2,9 +2,7 @@ package dto.loanDTO;
 
 import javafx.util.Pair;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class LoanDTO {
 
@@ -34,6 +32,8 @@ public class LoanDTO {
     private Pair<Integer, Double> delayedPayments;
     private int finishYaz;
     private boolean isPayingPeriod;
+    private double sellPrice;
+    private double buyPrice;
 
     private String amountRaisedString;
     private String amountLeftActiveString;
@@ -42,7 +42,21 @@ public class LoanDTO {
     private String totalAmountLeftToPayString;
     private String totalInterestLeftToPayString;
     private String delayedPaymentsAmountString;
+    private String buyPriceString;
+    private String sellPriceString;
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LoanDTO loanDTO = (LoanDTO) o;
+        return Double.compare(loanDTO.amount, amount) == 0 && totalYaz == loanDTO.totalYaz && paysEveryYaz == loanDTO.paysEveryYaz && Double.compare(loanDTO.interestPerPayment, interestPerPayment) == 0 && startingYaz == loanDTO.startingYaz && nextPaymentYaz == loanDTO.nextPaymentYaz && finishYaz == loanDTO.finishYaz && isPayingPeriod == loanDTO.isPayingPeriod && Double.compare(loanDTO.sellPrice, sellPrice) == 0 && Double.compare(loanDTO.buyPrice, buyPrice) == 0 && Objects.equals(id, loanDTO.id) && Objects.equals(owner, loanDTO.owner) && Objects.equals(category, loanDTO.category) && Objects.equals(status, loanDTO.status) && Objects.equals(lenders, loanDTO.lenders) && Objects.equals(paymentYaz, loanDTO.paymentYaz) && Objects.equals(paymentAmount, loanDTO.paymentAmount) && Objects.equals(paymentInterest, loanDTO.paymentInterest) && Objects.equals(delayedPayments, loanDTO.delayedPayments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, owner, category, amount, totalYaz, paysEveryYaz, interestPerPayment, status, lenders, startingYaz, nextPaymentYaz, paymentYaz, paymentAmount, paymentInterest, delayedPayments, finishYaz, isPayingPeriod, sellPrice, buyPrice);
+    }
 
     public LoanDTO(String id, String owner, String category, double amount, int totalYaz, int paysEveryYaz, double interestPerPayment, String status, Map<String, Double> lenders,
                    int startingYaz, int nextPaymentYaz, List<Integer> paymentYaz, List<Double> paymentAmount, List<Double> paymentInterest, Pair<Integer, Double> delayedPayments, int finishYaz,
@@ -89,7 +103,22 @@ public class LoanDTO {
         totalInterestLeftToPayString=String.format("%.1f", totalInterestLeftToPay);
         delayedPaymentsAmountString=String.format("%.1f", delayedPayments.getValue());
 
+        sellPrice=0;
+        buyPrice=0;
     }
+
+    public LoanDTO(String id, String owner, String category, double amount, int totalYaz, int paysEveryYaz, double interestPerPayment, String status, Map<String, Double> lenders,
+                   int startingYaz, int nextPaymentYaz, List<Integer> paymentYaz, List<Double> paymentAmount, List<Double> paymentInterest, Pair<Integer, Double> delayedPayments, int finishYaz,
+                   boolean isPayingPeriod, double sellPrice, double buyPrice) {
+            this(id, owner, category, amount, totalYaz, paysEveryYaz, interestPerPayment, status, lenders,
+        startingYaz, nextPaymentYaz, paymentYaz, paymentAmount, paymentInterest, delayedPayments, finishYaz,
+        isPayingPeriod);
+            this.sellPrice=sellPrice;
+            this.buyPrice=buyPrice;
+        buyPriceString=String.format("%.1f", buyPrice);
+        sellPriceString=String.format("%.1f", sellPrice);
+    }
+
 
     public LoanDTO(String id, String category, double amount, int totalYaz, int paysEveryYaz, double interestPerPayment) {
         this.id = id;
@@ -238,6 +267,22 @@ public class LoanDTO {
 
     public String getDelayedPaymentsAmountString() {
         return delayedPaymentsAmountString;
+    }
+
+    public double getSellPrice() {
+        return sellPrice;
+    }
+
+    public double getBuyPrice() {
+        return buyPrice;
+    }
+
+    public String getBuyPriceString() {
+        return buyPriceString;
+    }
+
+    public String getSellPriceString() {
+        return sellPriceString;
     }
 
     public boolean isPayingPeriod() {

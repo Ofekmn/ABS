@@ -6,7 +6,7 @@ public class Constants {
     // global constants
     public final static String LINE_SEPARATOR = System.getProperty("line.separator");
     public final static String JHON_DOE = "<Anonymous>";
-    public final static int REFRESH_RATE = 2000;
+    public final static int REFRESH_RATE = 500;
     public final static String CHAT_LINE_FORMATTING = "%tH:%tM:%tS | %.10s: %s%n";
 
     // fxml locations
@@ -25,8 +25,12 @@ public class Constants {
     public final static String CHARGE_PAGE = FULL_SERVER_PATH + "/charge";
     public final static String WITHDRAW_PAGE = FULL_SERVER_PATH + "/withdraw";
     public final static String NEW_LOAN_PAGE = FULL_SERVER_PATH + "/createLoan";
-    public final static String FILTER_PAGE= FULL_SERVER_PATH +"/filter";
-    public final static String SCRAMBLE_PAGE= FULL_SERVER_PATH+ "/scramble";
+    public final static String FILTER_PAGE = FULL_SERVER_PATH +"/filter";
+    public final static String SCRAMBLE_PAGE = FULL_SERVER_PATH+ "/scramble";
+    public final static String CUSTOMER_UPDATE_PAGE = FULL_SERVER_PATH + "/customerUpdate";
+    public final static String PAYMENT_PAGE = FULL_SERVER_PATH + "/payment";
+    public final static String SELL_LOAN_PAGE = FULL_SERVER_PATH + "/sellLoan";
+    public final static String BUY_LOAN_PAGE = FULL_SERVER_PATH + "/buyLoan";
     // GSON instance
     public final static Gson GSON_INSTANCE = new Gson();
 }

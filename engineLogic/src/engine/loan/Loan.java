@@ -28,6 +28,8 @@ public class Loan implements Comparable<Loan>, Serializable {
     private double totalAmountToPayForPayment;
     private boolean isPayingPeriod =false;
 
+    private Set<String> sellers=new HashSet<>();
+
 
 
     public Loan(String id, String owner, double amount, int totalYaz, int paysEveryXYaz, double interestPerPayment, String category) {
@@ -42,6 +44,9 @@ public class Loan implements Comparable<Loan>, Serializable {
         status = "new";
         delayedPayments=new Pair<>(0, 0.0);
     }
+
+
+
 
     @Override
     public boolean equals(Object o) {
@@ -190,7 +195,26 @@ public class Loan implements Comparable<Loan>, Serializable {
 
     public double totalSum() {return amount + interestPerPayment*amount/100;}
 
+    public double ownershipPercent(String lenderName) {return lenders.get(lenderName) / amount;}
 
+    public double getBuyPrice() {
+        double buyPrice=0;
+        for (String seller: sellers) {
+            buyPrice+=getSellPrice(seller);
+        }
+        return buyPrice;
+    }
+
+    public double getSellPrice(String seller){
+        double amountLeftToPay=getAmount() - getAmountPaid();
+        if(!lenders.containsKey(seller))
+            return 0;
+        return ownershipPercent(seller) * amountLeftToPay;
+    }
+
+    public Set<String> getSellers() {
+        return sellers;
+    }
 
     @Override
     public int compareTo(Loan loan){

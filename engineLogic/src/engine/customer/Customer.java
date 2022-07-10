@@ -1,9 +1,7 @@
 package engine.customer;
 
 import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Customer implements Serializable {
     private String name;
@@ -12,7 +10,8 @@ public class Customer implements Serializable {
     private List<String> borrowerLoans;
     private List<String> lenderLoans;
     private List<CustomerNotification> notificationList;
-
+    private Set<String> selling;
+    private List<String> otherNotifications;
 
     public Customer() {
     }
@@ -22,8 +21,10 @@ public class Customer implements Serializable {
         lenderLoans=new LinkedList<>();
         transactions=new LinkedList<>();
         notificationList= new LinkedList<>();
+        selling=new HashSet<>();
         this.name = name;
         this.balance = balance;
+        otherNotifications=new LinkedList<>();
     }
 
     @Override
@@ -77,5 +78,13 @@ public class Customer implements Serializable {
 
     public List<CustomerNotification> getNotificationList() {
         return notificationList;
+    }
+
+    public Set<String> getSelling() {
+        return selling;
+    }
+
+    public List<String> getOtherNotifications() {
+        return otherNotifications;
     }
 }
